@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>体重・食事・運動記録</title>
+  <style>
+    :root {
+      --bg: #f6f1e7;
+      --panel: rgba(255, 252, 246, 0.96);
+      --panel-strong: #fffaf2;
+      --line: #d7c8ae;
+      --text: #2f2419;
+      --sub: #6d5a48;
+      --accent: #b85c38;
+      --accent-strong: #924525;
+      --soft: #efe3d0;
+      --shadow: 0 10px 30px rgba(95, 64, 34, 0.12);
+      --radius: 18px;
+      --field-radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 240, 214, 0.85), transparent 34%),
+        linear-gradient(180deg, #f8f2e8 0%, #f2ebdf 100%);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--text);
+      line-height: 1.45;
+      padding: env(safe-area-inset-top) 14px calc(28px + env(safe-area-inset-bottom));
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 20px 18px 16px;
+      border-radius: 24px;
+      background:
+        linear-gradient(145deg, rgba(255, 250, 239, 0.96), rgba(247, 236, 220, 0.96)),
+        var(--panel);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(215, 200, 174, 0.8);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+
+    .intro {
+      margin: 0;
+      color: var(--sub);
+      font-size: 0.95rem;
+    }
+
+    .section {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(215, 200, 174, 0.75);
+      backdrop-filter: blur(6px);
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.basic {
+      grid-template-columns: 1fr;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label,
+    .subsection-title,
+    .row-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--sub);
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--field-radius);
+      background: #fffdf9;
+      color: var(--text);
+      padding: 12px 12px;
+      appearance: none;
+      -webkit-appearance: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(184, 92, 56, 0.14);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    input[readonly] {
+      background: #f6efe3;
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .weight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .weight-label-group {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: 8px;
+    }
+
+    .meal-block + .meal-block {
+      margin-top: 18px;
+    }
+
+    .meal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .meal-note {
+      font-size: 0.82rem;
+      color: var(--sub);
+    }
+
+    .meal-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meal-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .meal-row input {
+      min-width: 0;
+    }
+
+    .total-wrap {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--soft);
+    }
+
+    .actions {
+      position: sticky;
+      bottom: 0;
+      margin-top: 18px;
+      padding: 14px 0 0;
+      background: linear-gradient(180deg, rgba(242, 235, 223, 0), rgba(242, 235, 223, 0.96) 28%, rgba(242, 235, 223, 0.98) 100%);
+      backdrop-filter: blur(8px);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 48px;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #c86d45, #a74f2e);
+      color: #fff;
+      box-shadow: 0 10px 18px rgba(167, 79, 46, 0.22);
+    }
+
+    .secondary {
+      background: #fff9f1;
+      color: var(--accent-strong);
+      border: 1px solid var(--line);
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 1.2em;
+      color: var(--sub);
+      font-size: 0.88rem;
+    }
+
+    .output {
+      margin-top: 12px;
+    }
+
+    .output textarea {
+      min-height: 280px;
+      white-space: pre-wrap;
+    }
+
+    @media (min-width: 640px) {
+      body {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .grid.basic {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <h1>毎日の記録</h1>
+      <p class="intro">日付・体重・食事・運動をそのまま埋めて、最後に完成文をコピーできます。</p>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">基本項目</h2>
+      <div class="grid basic">
+        <div class="field">
+          <label for="record-date">日付</label>
+          <input id="record-date" data-key="date" type="date" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="height">身長(cm)</label>
+          <input id="height" data-key="height" type="text" inputmode="decimal" placeholder="172">
+        </div>
+        <div class="field full">
+          <div class="row-label">体重(kg)</div>
+          <div class="weight-grid">
+            <input data-key="weight0Value" type="text" inputmode="decimal" placeholder="63.6" aria-label="体重1 数値">
+            <div class="weight-label-group">
+              <input id="weight0-date" data-key="weight0Date" type="date" inputmode="numeric" aria-label="体重1 日付">
+              <select id="weight0-period" data-key="weight0Period" aria-label="体重1 時間帯">
+                <option value="朝">朝</option>
+                <option value="昼">昼</option>
+              </select>
+            </div>
+            <input data-key="weight1Value" type="text" inputmode="decimal" placeholder="64.1" aria-label="体重2 数値">
+            <div class="weight-label-group">
+              <input id="weight1-date" data-key="weight1Date" type="date" inputmode="numeric" aria-label="体重2 日付">
+              <select id="weight1-period" data-key="weight1Period" aria-label="体重2 時間帯">
+                <option value="朝">朝</option>
+                <option value="昼">昼</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">食事</h2>
+      <div id="meals-root"></div>
+      <div class="total-wrap">
+        <div class="field">
+          <label for="total-kcal">kcal合計</label>
+          <input id="total-kcal" type="text" readonly value="0">
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">運動と活動</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="commute">通勤</label>
+          <input id="commute" data-key="commute" type="text">
+        </div>
+        <div class="field">
+          <label for="exercise">運動した内容</label>
+          <textarea id="exercise" data-key="exercise"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <div class="button-row">
+        <button class="primary" id="generate-button" type="button">テキスト生成</button>
+        <button class="secondary" id="copy-button" type="button">コピー</button>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="output">
+        <div class="field">
+          <label for="output-text">完成テキスト</label>
+          <textarea id="output-text" readonly></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var storageKey = "bodyWeightRecordApp_v1";
+      var defaultData = {
+        date: "2026-03-12",
+        height: "172",
+        weight0Value: "63.6",
+        weight0Date: "2026-03-12",
+        weight0Period: "朝",
+        weight0Label: "12朝",
+        weight1Value: "64.1",
+        weight1Date: "2026-03-13",
+        weight1Period: "朝",
+        weight1Label: "13朝",
+        commute: "4km(通勤往復)+7階まで階段",
+        exercise: "クランチ200回+スクワット20回+5kgダンベル×２個を100回(色んな上げ方)+ストレッチ数分",
+        outputText: "",
+        meals: {
+          breakfast: [
+            { content: "核酸25ml", kcal: "20" },
+            { content: "ソイプロテイン10g水150ccきな粉5g＋緑茶10cc蜂蜜20gごま10gクエン酸5cc重曹1ccシナモン少々", kcal: "180" },
+            { content: "かぼちゃ", kcal: "30" },
+            { content: "玉ねぎと温玉と納豆とめかぶと木綿豆腐のサラダに玉ねぎポン酢", kcal: "300" },
+            { content: "", kcal: "" },
+            { content: "チョコクロワッサン", kcal: "340" },
+            { content: "", kcal: "" }
+          ],
+          lunch: [
+            { content: "水550ml", kcal: "0" },
+            { content: "", kcal: "" },
+            { content: "", kcal: "" }
+          ],
+          dinner: [
+            { content: "核酸25ml", kcal: "20" },
+            { content: "ミニトマト", kcal: "30" },
+            { content: "刺身：", kcal: "165" },
+            { content: "スープ：", kcal: "105" },
+            { content: "サラダ：大根、きゅうり、紫キャベツ、人参、水菜、めかぶ", kcal: "30" },
+            { content: "", kcal: "" },
+            { content: "", kcal: "" },
+            { content: "りんご", kcal: "75" },
+            { content: "", kcal: "" },
+            { content: "あったかい麦茶200ml×2", kcal: "0" }
+          ]
+        }
+      };
+
+      var mealConfig = [
+        { key: "breakfast", label: "朝" },
+        { key: "lunch", label: "昼" },
+        { key: "dinner", label: "夜" }
+      ];
+
+      function deepClone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function pad2(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function parseDateInput(value) {
+        var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) {
+          return null;
+        }
+
+        var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        if (
+          date.getFullYear() !== Number(match[1]) ||
+          date.getMonth() !== Number(match[2]) - 1 ||
+          date.getDate() !== Number(match[3])
+        ) {
+          return null;
+        }
+
+        return date;
+      }
+
+      function formatDateInput(date) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+          return "";
+        }
+        return [
+          date.getFullYear(),
+          pad2(date.getMonth() + 1),
+          pad2(date.getDate())
+        ].join("-");
+      }
+
+      function addDays(dateText, days) {
+        var date = parseDateInput(dateText);
+        if (!date) {
+          return "";
+        }
+        date.setDate(date.getDate() + days);
+        return formatDateInput(date);
+      }
+
+      function normalizePeriod(value) {
+        return value === "昼" ? "昼" : "朝";
+      }
+
+      function inferWeightDate(label, fallbackDate) {
+        var match = String(label || "").trim().match(/^(\d{1,2})(朝|昼)$/);
+        if (!match) {
+          return fallbackDate;
+        }
+
+        var base = parseDateInput(fallbackDate);
+        if (!base) {
+          return fallbackDate;
+        }
+
+        var day = Number(match[1]);
+        var candidate = new Date(base.getFullYear(), base.getMonth(), day);
+
+        if (candidate.getDate() !== day) {
+          return fallbackDate;
+        }
+
+        if (day < base.getDate() - 15) {
+          candidate = new Date(base.getFullYear(), base.getMonth() + 1, day);
+        } else if (day > base.getDate() + 15) {
+          candidate = new Date(base.getFullYear(), base.getMonth() - 1, day);
+        }
+
+        return formatDateInput(candidate);
+      }
+
+      function inferWeightPeriod(label, fallbackPeriod) {
+        var trimmed = String(label || "").trim();
+        if (/昼$/.test(trimmed)) {
+          return "昼";
+        }
+        if (/朝$/.test(trimmed)) {
+          return "朝";
+        }
+        return normalizePeriod(fallbackPeriod);
+      }
+
+      function syncDerivedWeightLabels() {
+        state.weight0Label = formatWeightLabel(state.weight0Date, state.weight0Period);
+        state.weight1Label = formatWeightLabel(state.weight1Date, state.weight1Period);
+      }
+
+      function ensureWeightFields() {
+        state.weight0Date = state.weight0Date || inferWeightDate(state.weight0Label, state.date);
+        state.weight0Period = inferWeightPeriod(state.weight0Label, state.weight0Period || "朝");
+        state.weight1Date = state.weight1Date || inferWeightDate(state.weight1Label, addDays(state.date, 1) || state.date);
+        state.weight1Period = inferWeightPeriod(state.weight1Label, state.weight1Period || "朝");
+        syncDerivedWeightLabels();
+      }
+
+      function mergeData(base, saved) {
+        var merged = deepClone(base);
+        if (!saved || typeof saved !== "object") {
+          return merged;
+        }
+
+        Object.keys(merged).forEach(function (key) {
+          if (key === "meals") {
+            return;
+          }
+          if (typeof saved[key] === "string") {
+            merged[key] = saved[key];
+          }
+        });
+
+        if (saved.meals && typeof saved.meals === "object") {
+          mealConfig.forEach(function (meal) {
+            if (Array.isArray(saved.meals[meal.key])) {
+              merged.meals[meal.key] = merged.meals[meal.key].map(function (item, index) {
+                var savedItem = saved.meals[meal.key][index];
+                if (!savedItem || typeof savedItem !== "object") {
+                  return item;
+                }
+                return {
+                  content: typeof savedItem.content === "string" ? savedItem.content : item.content,
+                  kcal: typeof savedItem.kcal === "string" ? savedItem.kcal : item.kcal
+                };
+              });
+            }
+          });
+        }
+
+        return merged;
+      }
+
+      function loadState() {
+        try {
+          var raw = localStorage.getItem(storageKey);
+          if (!raw) {
+            return deepClone(defaultData);
+          }
+          return mergeData(defaultData, JSON.parse(raw));
+        } catch (error) {
+          return deepClone(defaultData);
+        }
+      }
+
+      var state = loadState();
+      ensureWeightFields();
+      var statusEl = document.getElementById("status");
+      var mealsRoot = document.getElementById("meals-root");
+      var totalKcalEl = document.getElementById("total-kcal");
+      var outputEl = document.getElementById("output-text");
+
+      function setStatus(message) {
+        statusEl.textContent = message || "";
+      }
+
+      function saveState() {
+        try {
+          syncDerivedWeightLabels();
+          localStorage.setItem(storageKey, JSON.stringify(state));
+          setStatus("自動保存しました");
+        } catch (error) {
+          setStatus("保存に失敗しました");
+        }
+      }
+
+      function parseKcal(value) {
+        var text = String(value || "").trim();
+        if (!text) {
+          return 0;
+        }
+        var match = text.match(/-?\d+(\.\d+)?/);
+        return match ? Number(match[0]) : 0;
+      }
+
+      function updateTotalKcal() {
+        var total = 0;
+        mealConfig.forEach(function (meal) {
+          state.meals[meal.key].forEach(function (item) {
+            total += parseKcal(item.kcal);
+          });
+        });
+        var display = Number.isInteger(total) ? String(total) : String(total);
+        totalKcalEl.value = display;
+        return display;
+      }
+
+      function updateWeightFieldInputs() {
+        var weight0DateEl = document.getElementById("weight0-date");
+        var weight1DateEl = document.getElementById("weight1-date");
+        var weight0PeriodEl = document.getElementById("weight0-period");
+        var weight1PeriodEl = document.getElementById("weight1-period");
+
+        if (weight0DateEl) {
+          weight0DateEl.value = state.weight0Date || "";
+        }
+        if (weight1DateEl) {
+          weight1DateEl.value = state.weight1Date || "";
+        }
+        if (weight0PeriodEl) {
+          weight0PeriodEl.value = normalizePeriod(state.weight0Period);
+        }
+        if (weight1PeriodEl) {
+          weight1PeriodEl.value = normalizePeriod(state.weight1Period);
+        }
+      }
+
+      function syncWeightDatesWithRecordDate(previousDate, nextDate) {
+        var previousSecondDate = addDays(previousDate, 1);
+        var nextSecondDate = addDays(nextDate, 1);
+
+        if (!state.weight0Date || state.weight0Date === previousDate) {
+          state.weight0Date = nextDate;
+        }
+
+        if (!state.weight1Date || state.weight1Date === previousSecondDate) {
+          state.weight1Date = nextSecondDate || nextDate;
+        }
+
+        updateWeightFieldInputs();
+      }
+
+      function bindSimpleFields() {
+        var nodes = document.querySelectorAll("[data-key]");
+        nodes.forEach(function (node) {
+          var key = node.getAttribute("data-key");
+          if (!Object.prototype.hasOwnProperty.call(state, key)) {
+            return;
+          }
+          node.value = state[key];
+          var handleUpdate = function () {
+            var previousDate = key === "date" ? state.date : "";
+            state[key] = node.value;
+            if (key === "date") {
+              syncWeightDatesWithRecordDate(previousDate, state.date);
+            }
+            if (key === "weight0Period" || key === "weight1Period") {
+              state[key] = normalizePeriod(state[key]);
+            }
+            saveState();
+          };
+          node.addEventListener("input", handleUpdate);
+          node.addEventListener("change", handleUpdate);
+        });
+      }
+
+      function createMealRow(mealKey, rowIndex, item) {
+        var row = document.createElement("div");
+        row.className = "meal-row";
+
+        var contentInput = document.createElement("input");
+        contentInput.type = "text";
+        contentInput.value = item.content;
+        contentInput.placeholder = "内容";
+        contentInput.setAttribute("aria-label", mealKey + " 内容 " + (rowIndex + 1));
+
+        var kcalInput = document.createElement("input");
+        kcalInput.type = "text";
+        kcalInput.inputMode = "decimal";
+        kcalInput.value = item.kcal;
+        kcalInput.placeholder = "kcal";
+        kcalInput.setAttribute("aria-label", mealKey + " kcal " + (rowIndex + 1));
+
+        contentInput.addEventListener("input", function () {
+          state.meals[mealKey][rowIndex].content = contentInput.value;
+          saveState();
+        });
+
+        kcalInput.addEventListener("input", function () {
+          state.meals[mealKey][rowIndex].kcal = kcalInput.value;
+          updateTotalKcal();
+          saveState();
+        });
+
+        row.appendChild(contentInput);
+        row.appendChild(kcalInput);
+        return row;
+      }
+
+      function renderMeals() {
+        mealsRoot.innerHTML = "";
+        mealConfig.forEach(function (meal) {
+          var block = document.createElement("section");
+          block.className = "meal-block";
+
+          var head = document.createElement("div");
+          head.className = "meal-head";
+
+          var title = document.createElement("div");
+          title.className = "subsection-title";
+          title.textContent = meal.label;
+
+          var note = document.createElement("div");
+          note.className = "meal-note";
+          note.textContent = "左: 内容 / 右: kcal";
+
+          head.appendChild(title);
+          head.appendChild(note);
+
+          var list = document.createElement("div");
+          list.className = "meal-list";
+
+          state.meals[meal.key].forEach(function (item, index) {
+            list.appendChild(createMealRow(meal.key, index, item));
+          });
+
+          block.appendChild(head);
+          block.appendChild(list);
+          mealsRoot.appendChild(block);
+        });
+      }
+
+      function formatWeightLabel(dateText, period) {
+        var date = parseDateInput(dateText);
+        var label = normalizePeriod(period);
+
+        if (!date) {
+          return label;
+        }
+
+        return String(date.getDate()) + label;
+      }
+
+      function buildWeightText() {
+        var parts = [];
+        var firstValue = state.weight0Value.trim();
+        var firstLabel = formatWeightLabel(state.weight0Date, state.weight0Period);
+        var secondValue = state.weight1Value.trim();
+        var secondLabel = formatWeightLabel(state.weight1Date, state.weight1Period);
+
+        if (firstValue) {
+          parts.push(firstValue + (firstLabel ? "(" + firstLabel + ")" : ""));
+        }
+        if (secondValue) {
+          parts.push(secondValue + (secondLabel ? "(" + secondLabel + ")" : ""));
+        }
+
+        return parts.join("");
+      }
+
+      function collectMealLines(mealKey) {
+        return state.meals[mealKey]
+          .filter(function (item) {
+            return item.content.trim() || item.kcal.trim();
+          })
+          .map(function (item) {
+            var content = item.content.trim();
+            var kcal = item.kcal.trim() || "0";
+            return "・" + content + " " + kcal + "kcal";
+          });
+      }
+
+      function generateText() {
+        var total = updateTotalKcal();
+        var lines = [
+          "日付:" + state.date.trim(),
+          "身長(cm):" + state.height.trim(),
+          "体重(kg)：" + buildWeightText(),
+          "",
+          "食事:",
+          "",
+          "<朝>"
+        ];
+
+        lines = lines.concat(collectMealLines("breakfast"));
+        lines.push("");
+        lines.push("<昼>");
+        lines = lines.concat(collectMealLines("lunch"));
+        lines.push("");
+        lines.push("<夜>");
+        lines = lines.concat(collectMealLines("dinner"));
+        lines.push("");
+        lines.push("合計　" + total + " kcal");
+        lines.push("");
+        lines.push("運動と活動:");
+        lines.push("・通勤：" + state.commute.trim());
+        lines.push("・運動した内容：" + state.exercise.trim());
+
+        state.outputText = lines.join("\n");
+        outputEl.value = state.outputText;
+        saveState();
+        setStatus("テキストを生成しました");
+      }
+
+      function copyText() {
+        var text = outputEl.value;
+        if (!text) {
+          generateText();
+          text = outputEl.value;
+        }
+
+        function fallbackCopy() {
+          outputEl.removeAttribute("readonly");
+          outputEl.focus();
+          outputEl.select();
+          outputEl.setSelectionRange(0, outputEl.value.length);
+          var ok = false;
+          try {
+            ok = document.execCommand("copy");
+          } catch (error) {
+            ok = false;
+          }
+          outputEl.setAttribute("readonly", "readonly");
+          setStatus(ok ? "コピーしました" : "コピーに失敗しました");
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            setStatus("コピーしました");
+          }).catch(function () {
+            fallbackCopy();
+          });
+        } else {
+          fallbackCopy();
+        }
+      }
+
+      function restoreOutput() {
+        outputEl.value = state.outputText || "";
+      }
+
+      renderMeals();
+      bindSimpleFields();
+      updateWeightFieldInputs();
+      restoreOutput();
+      updateTotalKcal();
+
+      document.getElementById("generate-button").addEventListener("click", generateText);
+      document.getElementById("copy-button").addEventListener("click", copyText);
+    })();
+  </script>
+</body>
+</html>
