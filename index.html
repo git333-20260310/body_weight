@@ -108,6 +108,12 @@
       color: var(--sub);
     }
 
+    .date-note {
+      font-size: 0.82rem;
+      color: var(--sub);
+      min-height: 1.2em;
+    }
+
     input,
     select,
     textarea,
@@ -281,6 +287,7 @@
         <div class="field">
           <label for="record-date">日付</label>
           <input id="record-date" data-key="date" type="date" inputmode="numeric">
+          <div class="date-note" id="record-date-note"></div>
         </div>
         <div class="field">
           <label for="height">身長(cm)</label>
@@ -291,7 +298,10 @@
           <div class="weight-grid">
             <input data-key="weight0Value" type="text" inputmode="decimal" placeholder="63.6" aria-label="体重1 数値">
             <div class="weight-label-group">
-              <input id="weight0-date" data-key="weight0Date" type="date" inputmode="numeric" aria-label="体重1 日付">
+              <div class="field">
+                <input id="weight0-date" data-key="weight0Date" type="date" inputmode="numeric" aria-label="体重1 日付">
+                <div class="date-note" id="weight0-date-note"></div>
+              </div>
               <select id="weight0-period" data-key="weight0Period" aria-label="体重1 時間帯">
                 <option value="朝">朝</option>
                 <option value="昼">昼</option>
@@ -299,7 +309,10 @@
             </div>
             <input data-key="weight1Value" type="text" inputmode="decimal" placeholder="64.1" aria-label="体重2 数値">
             <div class="weight-label-group">
-              <input id="weight1-date" data-key="weight1Date" type="date" inputmode="numeric" aria-label="体重2 日付">
+              <div class="field">
+                <input id="weight1-date" data-key="weight1Date" type="date" inputmode="numeric" aria-label="体重2 日付">
+                <div class="date-note" id="weight1-date-note"></div>
+              </div>
               <select id="weight1-period" data-key="weight1Period" aria-label="体重2 時間帯">
                 <option value="朝">朝</option>
                 <option value="昼">昼</option>
@@ -353,17 +366,19 @@
   <script>
     (function () {
       var storageKey = "bodyWeightRecordApp_v1";
+      var historyStorageKey = "bodyWeightRecordHistory_v1";
+      var jstTimeZone = "Asia/Tokyo";
       var defaultData = {
-        date: "2026-03-12",
+        date: "",
         height: "172",
-        weight0Value: "63.6",
-        weight0Date: "2026-03-12",
+        weight0Value: "",
+        weight0Date: "",
         weight0Period: "朝",
-        weight0Label: "12朝",
-        weight1Value: "64.1",
-        weight1Date: "2026-03-13",
+        weight0Label: "",
+        weight1Value: "",
+        weight1Date: "",
         weight1Period: "朝",
-        weight1Label: "13朝",
+        weight1Label: "",
         commute: "4km(通勤往復)+7階まで階段",
         exercise: "クランチ200回+スクワット20回+5kgダンベル×２個を100回(色んな上げ方)+ストレッチ数分",
         outputText: "",
@@ -415,6 +430,31 @@
         return String(value).padStart(2, "0");
       }
 
+      function getJstDateParts(baseDate) {
+        var formatter = new Intl.DateTimeFormat("ja-JP", {
+          timeZone: jstTimeZone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          weekday: "short"
+        });
+        var parts = formatter.formatToParts(baseDate || new Date());
+        var map = {};
+
+        parts.forEach(function (part) {
+          if (part.type !== "literal") {
+            map[part.type] = part.value;
+          }
+        });
+
+        return map;
+      }
+
+      function getJstTodayInputValue() {
+        var parts = getJstDateParts(new Date());
+        return [parts.year, parts.month, parts.day].join("-");
+      }
+
       function parseDateInput(value) {
         var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (!match) {
@@ -442,6 +482,26 @@
           pad2(date.getMonth() + 1),
           pad2(date.getDate())
         ].join("-");
+      }
+
+      function formatDateWithWeekday(dateText) {
+        var date = parseDateInput(dateText);
+        var weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
+        if (!date) {
+          return "";
+        }
+
+        return [
+          date.getFullYear(),
+          "/",
+          pad2(date.getMonth() + 1),
+          "/",
+          pad2(date.getDate()),
+          "(",
+          weekdayLabels[date.getDay()],
+          ")"
+        ].join("");
       }
 
       function addDays(dateText, days) {
@@ -508,6 +568,20 @@
         syncDerivedWeightLabels();
       }
 
+      function loadHistory() {
+        try {
+          var raw = localStorage.getItem(historyStorageKey);
+          if (!raw) {
+            return {};
+          }
+
+          var parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
       function mergeData(base, saved) {
         var merged = deepClone(base);
         if (!saved || typeof saved !== "object") {
@@ -556,6 +630,8 @@
       }
 
       var state = loadState();
+      var history = loadHistory();
+      applyAutoDatesAndWeights();
       ensureWeightFields();
       var statusEl = document.getElementById("status");
       var mealsRoot = document.getElementById("meals-root");
@@ -570,10 +646,68 @@
         try {
           syncDerivedWeightLabels();
           localStorage.setItem(storageKey, JSON.stringify(state));
+          updateHistory();
           setStatus("自動保存しました");
         } catch (error) {
           setStatus("保存に失敗しました");
         }
+      }
+
+      function updateHistory() {
+        if (!state.date) {
+          return;
+        }
+
+        history[state.date] = {
+          weight0Value: state.weight0Value,
+          weight0Date: state.weight0Date,
+          weight0Period: state.weight0Period,
+          weight1Value: state.weight1Value,
+          weight1Date: state.weight1Date,
+          weight1Period: state.weight1Period
+        };
+
+        localStorage.setItem(historyStorageKey, JSON.stringify(history));
+      }
+
+      function findPreviousWeightValue(targetDate) {
+        var previousRecord = history[addDays(targetDate, -1)];
+
+        if (previousRecord && previousRecord.weight1Date === targetDate && String(previousRecord.weight1Value || "").trim()) {
+          return previousRecord.weight1Value;
+        }
+
+        if (previousRecord && previousRecord.weight0Date === targetDate && String(previousRecord.weight0Value || "").trim()) {
+          return previousRecord.weight0Value;
+        }
+
+        return "";
+      }
+
+      function applyAutoDatesAndWeights() {
+        var today = getJstTodayInputValue();
+        var tomorrow = addDays(today, 1);
+        var shouldRefreshDates = !state.date || state.date !== today;
+
+        if (shouldRefreshDates) {
+          state.date = today;
+          state.weight0Date = today;
+          state.weight1Date = tomorrow;
+          state.weight0Period = "朝";
+          state.weight1Period = "朝";
+          state.weight0Value = findPreviousWeightValue(today);
+          state.weight1Value = "";
+          state.outputText = "";
+        } else {
+          state.weight0Date = state.weight0Date || today;
+          state.weight1Date = state.weight1Date || tomorrow;
+
+          if (!String(state.weight0Value || "").trim()) {
+            state.weight0Value = findPreviousWeightValue(today);
+          }
+        }
+
+        syncDerivedWeightLabels();
       }
 
       function parseKcal(value) {
@@ -615,6 +749,23 @@
         if (weight1PeriodEl) {
           weight1PeriodEl.value = normalizePeriod(state.weight1Period);
         }
+
+        updateDateNotes();
+      }
+
+      function updateDateNotes() {
+        var notes = [
+          { id: "record-date-note", value: state.date },
+          { id: "weight0-date-note", value: state.weight0Date },
+          { id: "weight1-date-note", value: state.weight1Date }
+        ];
+
+        notes.forEach(function (item) {
+          var noteEl = document.getElementById(item.id);
+          if (noteEl) {
+            noteEl.textContent = formatDateWithWeekday(item.value);
+          }
+        });
       }
 
       function syncWeightDatesWithRecordDate(previousDate, nextDate) {
@@ -629,6 +780,7 @@
           state.weight1Date = nextSecondDate || nextDate;
         }
 
+        syncDerivedWeightLabels();
         updateWeightFieldInputs();
       }
 
@@ -764,8 +916,9 @@
 
       function generateText() {
         var total = updateTotalKcal();
+        var recordDateText = formatDateWithWeekday(state.date) || state.date.trim();
         var lines = [
-          "日付:" + state.date.trim(),
+          "日付:" + recordDateText,
           "身長(cm):" + state.height.trim(),
           "体重(kg)：" + buildWeightText(),
           "",
