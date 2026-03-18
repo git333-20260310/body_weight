@@ -170,12 +170,33 @@
       margin-top: 18px;
     }
 
+    .meal-block {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(215, 200, 174, 0.72);
+      background: rgba(255, 251, 244, 0.72);
+    }
+
+    .meal-block-breakfast {
+      background: linear-gradient(180deg, rgba(255, 248, 235, 0.96), rgba(255, 252, 246, 0.82));
+    }
+
+    .meal-block-lunch {
+      background: linear-gradient(180deg, rgba(247, 242, 229, 0.96), rgba(255, 252, 246, 0.82));
+    }
+
+    .meal-block-dinner {
+      background: linear-gradient(180deg, rgba(242, 236, 228, 0.96), rgba(255, 252, 246, 0.82));
+    }
+
     .meal-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
       margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(215, 200, 174, 0.72);
     }
 
     .meal-note {
@@ -190,13 +211,196 @@
 
     .meal-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 92px;
       gap: 8px;
       align-items: start;
     }
 
     .meal-row input {
       min-width: 0;
+    }
+
+    .meal-row-picker {
+      display: grid;
+      gap: 4px;
+      justify-items: start;
+    }
+
+    .meal-row-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .meal-row-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px 44px;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .meal-row-picker-toggle {
+      min-height: 36px;
+      width: 36px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(215, 200, 174, 0.9);
+      background: rgba(255, 253, 249, 0.85);
+      color: var(--sub);
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    .meal-row-picker-toggle::before {
+      content: "+";
+      display: block;
+      line-height: 1;
+      font-size: 1rem;
+    }
+
+    .meal-row-picker-toggle.is-open {
+      background: var(--soft);
+      color: var(--accent-strong);
+      border-color: rgba(184, 92, 56, 0.35);
+    }
+
+    .meal-row-picker-toggle.is-open::before {
+      content: "×";
+    }
+
+    .meal-row-picker-panel {
+      width: 100%;
+    }
+
+    .meal-row-picker-panel[hidden] {
+      display: none;
+    }
+
+    .meal-candidate-select {
+      padding: 8px 12px;
+      min-height: 38px;
+      font-size: 0.88rem;
+      color: var(--sub);
+      background: rgba(255, 253, 249, 0.72);
+      border-color: rgba(215, 200, 174, 0.72);
+      box-shadow: none;
+    }
+
+    .meal-add-row {
+      margin-top: 10px;
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px dashed rgba(184, 92, 56, 0.38);
+      background: rgba(255, 249, 241, 0.72);
+      color: var(--accent-strong);
+      box-shadow: none;
+    }
+
+    .meal-remove-row {
+      min-height: 44px;
+      width: 44px;
+      padding: 0;
+      border-radius: 12px;
+      border: 1px solid rgba(184, 92, 56, 0.28);
+      background: #fff1eb;
+      color: #a14425;
+      box-shadow: none;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .meal-memory-panel {
+      margin-bottom: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 249, 241, 0.9);
+      border: 1px solid rgba(215, 200, 174, 0.9);
+    }
+
+    .meal-memory-title {
+      margin: 0 0 4px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .meal-memory-copy {
+      margin: 0 0 12px;
+      font-size: 0.84rem;
+      color: var(--sub);
+    }
+
+    .meal-memory-editor {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #fffdf8;
+      border: 1px solid var(--line);
+    }
+
+    .meal-memory-editor[hidden] {
+      display: none;
+    }
+
+    .meal-memory-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .meal-memory-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .meal-memory-empty {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(239, 227, 208, 0.7);
+      color: var(--sub);
+      font-size: 0.84rem;
+    }
+
+    .meal-memory-item {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #fffdf9;
+      border: 1px solid rgba(215, 200, 174, 0.9);
+    }
+
+    .meal-memory-content {
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .meal-memory-meta {
+      font-size: 0.8rem;
+      color: var(--sub);
+    }
+
+    .meal-memory-item-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .button-small {
+      min-height: 42px;
+      padding: 11px 12px;
+      border-radius: 12px;
+    }
+
+    .danger {
+      background: #fff1eb;
+      color: #a14425;
+      border: 1px solid rgba(184, 92, 56, 0.28);
     }
 
     .total-wrap {
@@ -360,6 +564,25 @@
           <textarea id="output-text" readonly></textarea>
         </div>
       </div>
+      <div class="meal-memory-panel">
+        <div class="meal-memory-title">よく使う食事</div>
+        <p class="meal-memory-copy">入力した内容は自動保存され、使用回数が多い順に候補へ出ます。</p>
+        <div class="meal-memory-editor" id="meal-memory-editor" hidden>
+          <div class="field">
+            <label for="meal-memory-content">食事内容を編集</label>
+            <input id="meal-memory-content" type="text" placeholder="例: 納豆ごはん">
+          </div>
+          <div class="field">
+            <label for="meal-memory-kcal">kcal</label>
+            <input id="meal-memory-kcal" type="text" inputmode="decimal" placeholder="例: 320">
+          </div>
+          <div class="meal-memory-actions">
+            <button class="primary button-small" id="meal-memory-save" type="button">保存</button>
+            <button class="secondary button-small" id="meal-memory-cancel" type="button">キャンセル</button>
+          </div>
+        </div>
+        <div class="meal-memory-list" id="meal-memory-list"></div>
+      </div>
     </section>
   </div>
 
@@ -367,6 +590,9 @@
     (function () {
       var storageKey = "bodyWeightRecordApp_v1";
       var historyStorageKey = "bodyWeightRecordHistory_v1";
+      var mealMemoryStorageKey = "bodyWeightMealMemory_v1";
+      var mealDayHistoryStorageKey = "bodyWeightMealDayHistory_v1";
+      var maxMealCandidates = 12;
       var jstTimeZone = "Asia/Tokyo";
       var defaultData = {
         date: "",
@@ -582,6 +808,20 @@
         }
       }
 
+      function loadMealDayHistory() {
+        try {
+          var raw = localStorage.getItem(mealDayHistoryStorageKey);
+          if (!raw) {
+            return {};
+          }
+
+          var parsed = JSON.parse(raw);
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
       function mergeData(base, saved) {
         var merged = deepClone(base);
         if (!saved || typeof saved !== "object") {
@@ -629,14 +869,303 @@
         }
       }
 
+      function normalizeMealContent(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+      }
+
+      function normalizeMealKcal(value) {
+        return String(value || "").trim();
+      }
+
+      function createEmptyMealItem() {
+        return { content: "", kcal: "" };
+      }
+
+      function normalizeMealItem(item) {
+        if (!item || typeof item !== "object") {
+          return createEmptyMealItem();
+        }
+
+        return {
+          content: typeof item.content === "string" ? item.content : "",
+          kcal: typeof item.kcal === "string" ? item.kcal : ""
+        };
+      }
+
+      function hasMealItemValue(item) {
+        return Boolean(normalizeMealContent(item.content) || normalizeMealKcal(item.kcal));
+      }
+
+      function normalizeMealRows(items) {
+        var normalized = Array.isArray(items) ? items.map(normalizeMealItem) : [];
+
+        while (normalized.length && !hasMealItemValue(normalized[normalized.length - 1])) {
+          normalized.pop();
+        }
+
+        normalized.push(createEmptyMealItem());
+        return normalized;
+      }
+
+      function normalizeMealsCollection(meals) {
+        var nextMeals = {};
+
+        mealConfig.forEach(function (meal) {
+          nextMeals[meal.key] = normalizeMealRows(meals && meals[meal.key]);
+        });
+
+        return nextMeals;
+      }
+
+      function cloneMeals(meals) {
+        return deepClone(meals || {});
+      }
+
+      function hasAnyMealContent(meals) {
+        return mealConfig.some(function (meal) {
+          return (meals && meals[meal.key] || []).some(hasMealItemValue);
+        });
+      }
+
+      function saveMealDayHistory() {
+        if (!state.date) {
+          return;
+        }
+
+        mealDayHistory[state.date] = normalizeMealsCollection(state.meals);
+        localStorage.setItem(mealDayHistoryStorageKey, JSON.stringify(mealDayHistory));
+      }
+
+      function getMealsForCarryOver(targetDate, previousStateDate, previousMeals) {
+        var previousDate = addDays(targetDate, -1);
+        var saved = mealDayHistory[previousDate];
+
+        if (previousStateDate === previousDate && hasAnyMealContent(previousMeals)) {
+          return normalizeMealsCollection(previousMeals);
+        }
+
+        if (saved && hasAnyMealContent(saved)) {
+          return normalizeMealsCollection(saved);
+        }
+
+        return normalizeMealsCollection(defaultData.meals);
+      }
+
+      function createMealMemoryId() {
+        return "meal_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      }
+
+      function sortMealMemoryList(list) {
+        return list.sort(function (a, b) {
+          if ((b.count || 0) !== (a.count || 0)) {
+            return (b.count || 0) - (a.count || 0);
+          }
+          if ((b.updatedAt || 0) !== (a.updatedAt || 0)) {
+            return (b.updatedAt || 0) - (a.updatedAt || 0);
+          }
+          return a.content.localeCompare(b.content, "ja");
+        });
+      }
+
+      function normalizeMealMemoryItem(item) {
+        var content = normalizeMealContent(item && item.content);
+        if (!content) {
+          return null;
+        }
+
+        return {
+          id: typeof item.id === "string" && item.id ? item.id : createMealMemoryId(),
+          content: content,
+          kcal: normalizeMealKcal(item.kcal),
+          count: Math.max(1, Number(item.count) || 1),
+          updatedAt: Number(item.updatedAt) || Date.now()
+        };
+      }
+
+      function loadMealMemory() {
+        try {
+          var raw = localStorage.getItem(mealMemoryStorageKey);
+          if (!raw) {
+            return [];
+          }
+
+          var parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            return [];
+          }
+
+          var mergedMap = {};
+          parsed.forEach(function (item) {
+            var normalized = normalizeMealMemoryItem(item);
+            var key;
+            if (!normalized) {
+              return;
+            }
+
+            key = normalized.content;
+            if (!mergedMap[key]) {
+              mergedMap[key] = normalized;
+              return;
+            }
+
+            mergedMap[key].count += normalized.count;
+            if (normalized.updatedAt >= mergedMap[key].updatedAt) {
+              mergedMap[key].kcal = normalized.kcal;
+              mergedMap[key].updatedAt = normalized.updatedAt;
+            }
+          });
+
+          return sortMealMemoryList(Object.keys(mergedMap).map(function (key) {
+            return mergedMap[key];
+          }));
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveMealMemory() {
+        localStorage.setItem(mealMemoryStorageKey, JSON.stringify(sortMealMemoryList(mealMemory.slice())));
+      }
+
+      function seedMealMemoryFromState() {
+        var seeded = [];
+        mealConfig.forEach(function (meal) {
+          state.meals[meal.key].forEach(function (item) {
+            var content = normalizeMealContent(item.content);
+            var kcal = normalizeMealKcal(item.kcal);
+            var existing;
+
+            if (!content) {
+              return;
+            }
+
+            existing = seeded.find(function (entry) {
+              return entry.content === content;
+            });
+
+            if (existing) {
+              existing.count += 1;
+              if (kcal) {
+                existing.kcal = kcal;
+              }
+              existing.updatedAt = Date.now();
+              return;
+            }
+
+            seeded.push({
+              id: createMealMemoryId(),
+              content: content,
+              kcal: kcal,
+              count: 1,
+              updatedAt: Date.now()
+            });
+          });
+        });
+
+        return sortMealMemoryList(seeded);
+      }
+
+      function findMealMemoryById(id) {
+        return mealMemory.find(function (item) {
+          return item.id === id;
+        }) || null;
+      }
+
+      function findMealMemoryByContent(content, excludeId) {
+        var normalizedContent = normalizeMealContent(content);
+        return mealMemory.find(function (item) {
+          return item.id !== excludeId && item.content === normalizedContent;
+        }) || null;
+      }
+
+      function upsertMealMemory(content, kcal, options) {
+        var normalizedContent = normalizeMealContent(content);
+        var normalizedKcal = normalizeMealKcal(kcal);
+        var settings = options || {};
+        var existing;
+        var now;
+        var nextCount;
+
+        if (!normalizedContent) {
+          return null;
+        }
+
+        existing = findMealMemoryByContent(normalizedContent);
+        now = Date.now();
+
+        if (existing) {
+          nextCount = settings.increment ? (existing.count || 0) + 1 : (existing.count || 0);
+          existing.count = Math.max(1, nextCount);
+          if (normalizedKcal || !existing.kcal) {
+            existing.kcal = normalizedKcal;
+          }
+          existing.updatedAt = now;
+          saveMealMemory();
+          return existing;
+        }
+
+        existing = {
+          id: createMealMemoryId(),
+          content: normalizedContent,
+          kcal: normalizedKcal,
+          count: Math.max(1, settings.increment ? 1 : 1),
+          updatedAt: now
+        };
+
+        mealMemory.push(existing);
+        saveMealMemory();
+        return existing;
+      }
+
+      function deleteMealMemory(id) {
+        mealMemory = mealMemory.filter(function (item) {
+          return item.id !== id;
+        });
+        saveMealMemory();
+      }
+
+      function getMealRowToken(mealKey, rowIndex) {
+        return mealKey + ":" + rowIndex;
+      }
+
+      function getMealRowSignature(content, kcal) {
+        var normalizedContent = normalizeMealContent(content);
+        if (!normalizedContent) {
+          return "";
+        }
+        return normalizedContent + "||" + normalizeMealKcal(kcal);
+      }
+
+      function buildMealCommitMap() {
+        var map = {};
+        mealConfig.forEach(function (meal) {
+          state.meals[meal.key].forEach(function (item, index) {
+            map[getMealRowToken(meal.key, index)] = getMealRowSignature(item.content, item.kcal);
+          });
+        });
+        return map;
+      }
+
       var state = loadState();
       var history = loadHistory();
+      var mealDayHistory = loadMealDayHistory();
+      var mealMemory = loadMealMemory();
+      var editingMealMemoryId = "";
       applyAutoDatesAndWeights();
       ensureWeightFields();
+      if (!mealMemory.length) {
+        mealMemory = seedMealMemoryFromState();
+        saveMealMemory();
+      }
+      var mealCommitMap = buildMealCommitMap();
       var statusEl = document.getElementById("status");
       var mealsRoot = document.getElementById("meals-root");
       var totalKcalEl = document.getElementById("total-kcal");
       var outputEl = document.getElementById("output-text");
+      var mealMemoryListEl = document.getElementById("meal-memory-list");
+      var mealMemoryEditorEl = document.getElementById("meal-memory-editor");
+      var mealMemoryContentEl = document.getElementById("meal-memory-content");
+      var mealMemoryKcalEl = document.getElementById("meal-memory-kcal");
 
       function setStatus(message) {
         statusEl.textContent = message || "";
@@ -647,6 +1176,7 @@
           syncDerivedWeightLabels();
           localStorage.setItem(storageKey, JSON.stringify(state));
           updateHistory();
+          saveMealDayHistory();
           setStatus("自動保存しました");
         } catch (error) {
           setStatus("保存に失敗しました");
@@ -688,6 +1218,8 @@
         var today = getJstTodayInputValue();
         var tomorrow = addDays(today, 1);
         var shouldRefreshDates = !state.date || state.date !== today;
+        var previousStateDate = state.date;
+        var previousMeals = cloneMeals(state.meals);
 
         if (shouldRefreshDates) {
           state.date = today;
@@ -698,6 +1230,7 @@
           state.weight0Value = findPreviousWeightValue(today);
           state.weight1Value = "";
           state.outputText = "";
+          state.meals = getMealsForCarryOver(today, previousStateDate, previousMeals);
         } else {
           state.weight0Date = state.weight0Date || today;
           state.weight1Date = state.weight1Date || tomorrow;
@@ -705,6 +1238,7 @@
           if (!String(state.weight0Value || "").trim()) {
             state.weight0Value = findPreviousWeightValue(today);
           }
+
         }
 
         syncDerivedWeightLabels();
@@ -808,9 +1342,211 @@
         });
       }
 
+      function getMealMemoryOptions() {
+        return sortMealMemoryList(mealMemory.slice());
+      }
+
+      function populateMealCandidateSelect(selectEl, currentContent) {
+        var options = getMealMemoryOptions().slice(0, maxMealCandidates);
+        var matched = findMealMemoryByContent(currentContent);
+        var matchedInTop = matched && options.some(function (item) {
+          return item.id === matched.id;
+        });
+
+        selectEl.innerHTML = "";
+
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "候補から選択";
+        selectEl.appendChild(placeholder);
+
+        options.forEach(function (item) {
+          var option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.content + (item.kcal ? " / " + item.kcal + "kcal" : "");
+          selectEl.appendChild(option);
+        });
+
+        if (matched && !matchedInTop) {
+          var currentOption = document.createElement("option");
+          currentOption.value = matched.id;
+          currentOption.textContent = matched.content + (matched.kcal ? " / " + matched.kcal + "kcal" : "");
+          selectEl.appendChild(currentOption);
+        }
+
+        selectEl.value = matched ? matched.id : "";
+      }
+
+      function refreshMealCandidateSelects() {
+        var selects = document.querySelectorAll(".meal-candidate-select");
+        selects.forEach(function (selectEl) {
+          var mealKey = selectEl.getAttribute("data-meal-key");
+          var rowIndex = Number(selectEl.getAttribute("data-row-index"));
+          var currentItem = state.meals[mealKey] && state.meals[mealKey][rowIndex];
+          populateMealCandidateSelect(selectEl, currentItem ? currentItem.content : "");
+        });
+      }
+
+      function syncMealMemoryFromRow(mealKey, rowIndex, options) {
+        var item = state.meals[mealKey][rowIndex];
+        var token = getMealRowToken(mealKey, rowIndex);
+        var nextSignature = getMealRowSignature(item.content, item.kcal);
+        var previousSignature = mealCommitMap[token] || "";
+        var settings = options || {};
+        var shouldIncrement = Boolean(settings.increment && nextSignature && nextSignature !== previousSignature);
+
+        if (!nextSignature) {
+          mealCommitMap[token] = "";
+          return null;
+        }
+
+        mealCommitMap[token] = nextSignature;
+        return upsertMealMemory(item.content, item.kcal, { increment: shouldIncrement });
+      }
+
+      function startMealMemoryEdit(id) {
+        var target = findMealMemoryById(id);
+        if (!target) {
+          return;
+        }
+
+        editingMealMemoryId = id;
+        mealMemoryContentEl.value = target.content;
+        mealMemoryKcalEl.value = target.kcal;
+        mealMemoryEditorEl.hidden = false;
+        mealMemoryContentEl.focus();
+      }
+
+      function stopMealMemoryEdit() {
+        editingMealMemoryId = "";
+        mealMemoryContentEl.value = "";
+        mealMemoryKcalEl.value = "";
+        mealMemoryEditorEl.hidden = true;
+      }
+
+      function saveMealMemoryEdit() {
+        var target = findMealMemoryById(editingMealMemoryId);
+        var normalizedContent;
+        var normalizedKcal;
+        var duplicate;
+
+        if (!target) {
+          stopMealMemoryEdit();
+          return;
+        }
+
+        normalizedContent = normalizeMealContent(mealMemoryContentEl.value);
+        normalizedKcal = normalizeMealKcal(mealMemoryKcalEl.value);
+
+        if (!normalizedContent) {
+          setStatus("食事内容を入力してください");
+          mealMemoryContentEl.focus();
+          return;
+        }
+
+        duplicate = findMealMemoryByContent(normalizedContent, target.id);
+
+        if (duplicate) {
+          duplicate.count += target.count;
+          duplicate.kcal = normalizedKcal || duplicate.kcal;
+          duplicate.updatedAt = Date.now();
+          deleteMealMemory(target.id);
+        } else {
+          target.content = normalizedContent;
+          target.kcal = normalizedKcal;
+          target.updatedAt = Date.now();
+          saveMealMemory();
+        }
+
+        stopMealMemoryEdit();
+        renderMealMemoryList();
+        refreshMealCandidateSelects();
+        setStatus("よく使う食事を更新しました");
+      }
+
+      function renderMealMemoryList() {
+        var items = getMealMemoryOptions();
+        mealMemoryListEl.innerHTML = "";
+
+        if (!items.length) {
+          var emptyEl = document.createElement("div");
+          emptyEl.className = "meal-memory-empty";
+          emptyEl.textContent = "食事内容を入力すると、ここに候補がたまります。";
+          mealMemoryListEl.appendChild(emptyEl);
+          return;
+        }
+
+        items.forEach(function (item) {
+          var card = document.createElement("div");
+          card.className = "meal-memory-item";
+
+          var contentEl = document.createElement("div");
+          contentEl.className = "meal-memory-content";
+          contentEl.textContent = item.content;
+
+          var metaEl = document.createElement("div");
+          metaEl.className = "meal-memory-meta";
+          metaEl.textContent = (item.kcal ? item.kcal + "kcal" : "kcal未設定") + " ・ 使用 " + item.count + "回";
+
+          var actionsEl = document.createElement("div");
+          actionsEl.className = "meal-memory-item-actions";
+
+          var editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.className = "secondary button-small";
+          editButton.textContent = "編集";
+          editButton.addEventListener("click", function () {
+            startMealMemoryEdit(item.id);
+          });
+
+          var deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "danger button-small";
+          deleteButton.textContent = "削除";
+          deleteButton.addEventListener("click", function () {
+            if (!window.confirm("この候補を削除しますか？")) {
+              return;
+            }
+            if (editingMealMemoryId === item.id) {
+              stopMealMemoryEdit();
+            }
+            deleteMealMemory(item.id);
+            renderMealMemoryList();
+            refreshMealCandidateSelects();
+            setStatus("よく使う食事を削除しました");
+          });
+
+          actionsEl.appendChild(editButton);
+          actionsEl.appendChild(deleteButton);
+          card.appendChild(contentEl);
+          card.appendChild(metaEl);
+          card.appendChild(actionsEl);
+          mealMemoryListEl.appendChild(card);
+        });
+      }
+
       function createMealRow(mealKey, rowIndex, item) {
         var row = document.createElement("div");
         row.className = "meal-row";
+
+        var pickerWrap = document.createElement("div");
+        pickerWrap.className = "meal-row-picker";
+
+        var pickerToggle = document.createElement("button");
+        pickerToggle.type = "button";
+        pickerToggle.className = "meal-row-picker-toggle";
+        pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
+
+        var pickerPanel = document.createElement("div");
+        pickerPanel.className = "meal-row-picker-panel";
+        pickerPanel.hidden = true;
+
+        var candidateSelect = document.createElement("select");
+        candidateSelect.className = "meal-candidate-select";
+        candidateSelect.setAttribute("data-meal-key", mealKey);
+        candidateSelect.setAttribute("data-row-index", String(rowIndex));
+        candidateSelect.setAttribute("aria-label", mealKey + " 候補 " + (rowIndex + 1));
+        populateMealCandidateSelect(candidateSelect, item.content);
 
         var contentInput = document.createElement("input");
         contentInput.type = "text";
@@ -825,19 +1561,128 @@
         kcalInput.placeholder = "kcal";
         kcalInput.setAttribute("aria-label", mealKey + " kcal " + (rowIndex + 1));
 
+        var removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "meal-remove-row";
+        removeButton.textContent = "−";
+        removeButton.setAttribute("aria-label", mealKey + " 行削除 " + (rowIndex + 1));
+
+        var mainRow = document.createElement("div");
+        mainRow.className = "meal-row-actions";
+
         contentInput.addEventListener("input", function () {
           state.meals[mealKey][rowIndex].content = contentInput.value;
           saveState();
+          populateMealCandidateSelect(candidateSelect, contentInput.value);
         });
 
         kcalInput.addEventListener("input", function () {
           state.meals[mealKey][rowIndex].kcal = kcalInput.value;
           updateTotalKcal();
           saveState();
+          populateMealCandidateSelect(candidateSelect, contentInput.value);
         });
 
-        row.appendChild(contentInput);
-        row.appendChild(kcalInput);
+        function commitCurrentMeal() {
+          syncMealMemoryFromRow(mealKey, rowIndex, { increment: true });
+          renderMealMemoryList();
+          refreshMealCandidateSelects();
+        }
+
+        function setPickerOpen(isOpen) {
+          pickerPanel.hidden = !isOpen;
+          if (isOpen) {
+            pickerToggle.classList.add("is-open");
+            pickerToggle.setAttribute("aria-label", mealKey + " 候補を閉じる " + (rowIndex + 1));
+          } else {
+            pickerToggle.classList.remove("is-open");
+            pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
+          }
+        }
+
+        function openCandidatePicker() {
+          if (typeof candidateSelect.showPicker === "function") {
+            try {
+              candidateSelect.showPicker();
+              return;
+            } catch (error) {
+            }
+          }
+
+          candidateSelect.focus();
+
+          window.setTimeout(function () {
+            try {
+              candidateSelect.click();
+            } catch (error) {
+            }
+          }, 0);
+        }
+
+        contentInput.addEventListener("blur", commitCurrentMeal);
+        contentInput.addEventListener("change", commitCurrentMeal);
+        kcalInput.addEventListener("blur", commitCurrentMeal);
+        kcalInput.addEventListener("change", commitCurrentMeal);
+
+        pickerToggle.addEventListener("click", function () {
+          setPickerOpen(pickerPanel.hidden);
+          if (!pickerPanel.hidden) {
+            openCandidatePicker();
+          }
+        });
+
+        candidateSelect.addEventListener("change", function () {
+          var selected = findMealMemoryById(candidateSelect.value);
+          var token = getMealRowToken(mealKey, rowIndex);
+          if (!selected) {
+            setPickerOpen(false);
+            return;
+          }
+
+          state.meals[mealKey][rowIndex].content = selected.content;
+          state.meals[mealKey][rowIndex].kcal = selected.kcal;
+          contentInput.value = selected.content;
+          kcalInput.value = selected.kcal;
+          mealCommitMap[token] = getMealRowSignature(selected.content, selected.kcal);
+          upsertMealMemory(selected.content, selected.kcal, { increment: true });
+          updateTotalKcal();
+          saveState();
+          renderMealMemoryList();
+          refreshMealCandidateSelects();
+          setPickerOpen(false);
+        });
+
+        candidateSelect.addEventListener("blur", function () {
+          window.setTimeout(function () {
+            if (document.activeElement !== pickerToggle) {
+              setPickerOpen(false);
+            }
+          }, 120);
+        });
+
+        removeButton.addEventListener("click", function () {
+          var token = getMealRowToken(mealKey, rowIndex);
+
+          state.meals[mealKey].splice(rowIndex, 1);
+          delete mealCommitMap[token];
+
+          if (!state.meals[mealKey].length) {
+            state.meals[mealKey].push(createEmptyMealItem());
+          }
+
+          saveState();
+          renderMeals();
+          updateTotalKcal();
+        });
+
+        pickerPanel.appendChild(candidateSelect);
+        pickerWrap.appendChild(pickerToggle);
+        pickerWrap.appendChild(pickerPanel);
+        mainRow.appendChild(contentInput);
+        mainRow.appendChild(kcalInput);
+        mainRow.appendChild(removeButton);
+        row.appendChild(pickerWrap);
+        row.appendChild(mainRow);
         return row;
       }
 
@@ -846,6 +1691,7 @@
         mealConfig.forEach(function (meal) {
           var block = document.createElement("section");
           block.className = "meal-block";
+          block.classList.add("meal-block-" + meal.key);
 
           var head = document.createElement("div");
           head.className = "meal-head";
@@ -868,8 +1714,19 @@
             list.appendChild(createMealRow(meal.key, index, item));
           });
 
+          var addRowButton = document.createElement("button");
+          addRowButton.type = "button";
+          addRowButton.className = "meal-add-row";
+          addRowButton.textContent = "＋ 1行追加";
+          addRowButton.addEventListener("click", function () {
+            state.meals[meal.key].push(createEmptyMealItem());
+            saveState();
+            renderMeals();
+          });
+
           block.appendChild(head);
           block.appendChild(list);
+          block.appendChild(addRowButton);
           mealsRoot.appendChild(block);
         });
       }
@@ -985,6 +1842,7 @@
       }
 
       renderMeals();
+      renderMealMemoryList();
       bindSimpleFields();
       updateWeightFieldInputs();
       restoreOutput();
@@ -992,6 +1850,8 @@
 
       document.getElementById("generate-button").addEventListener("click", generateText);
       document.getElementById("copy-button").addEventListener("click", copyText);
+      document.getElementById("meal-memory-save").addEventListener("click", saveMealMemoryEdit);
+      document.getElementById("meal-memory-cancel").addEventListener("click", stopMealMemoryEdit);
     })();
   </script>
 </body>
