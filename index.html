@@ -500,7 +500,7 @@
         <div class="field full">
           <div class="row-label">体重(kg)</div>
           <div class="weight-grid">
-            <input data-key="weight0Value" type="text" inputmode="decimal" placeholder="63.6" aria-label="体重1 数値">
+            <input data-key="weight0Value" type="text" inputmode="decimal" placeholder="63.5" aria-label="体重1 数値">
             <div class="weight-label-group">
               <div class="field">
                 <input id="weight0-date" data-key="weight0Date" type="date" inputmode="numeric" aria-label="体重1 日付">
@@ -511,7 +511,7 @@
                 <option value="昼">昼</option>
               </select>
             </div>
-            <input data-key="weight1Value" type="text" inputmode="decimal" placeholder="64.1" aria-label="体重2 数値">
+            <input data-key="weight1Value" type="text" inputmode="decimal" placeholder="63.5" aria-label="体重2 数値">
             <div class="weight-label-group">
               <div class="field">
                 <input id="weight1-date" data-key="weight1Date" type="date" inputmode="numeric" aria-label="体重2 日付">
@@ -662,6 +662,7 @@
           year: "numeric",
           month: "2-digit",
           day: "2-digit",
+          hour: "2-digit",
           weekday: "short"
         });
         var parts = formatter.formatToParts(baseDate || new Date());
@@ -678,6 +679,15 @@
 
       function getJstTodayInputValue() {
         var parts = getJstDateParts(new Date());
+        var hour = Number(parts.hour || "0");
+        var baseDate;
+
+        if (hour < 13) {
+          baseDate = new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+          baseDate.setDate(baseDate.getDate() - 1);
+          return formatDateInput(baseDate);
+        }
+
         return [parts.year, parts.month, parts.day].join("-");
       }
 
@@ -840,16 +850,59 @@
         if (saved.meals && typeof saved.meals === "object") {
           mealConfig.forEach(function (meal) {
             if (Array.isArray(saved.meals[meal.key])) {
-              merged.meals[meal.key] = merged.meals[meal.key].map(function (item, index) {
-                var savedItem = saved.meals[meal.key][index];
+              merged.meals[meal.key] = saved.meals[meal.key].map(function (savedItem, index) {
+                var baseItem = base.meals[meal.key][index] || { content: "", kcal: "" };
                 if (!savedItem || typeof savedItem !== "object") {
-                  return item;
+                  return baseItem;
                 }
                 return {
-                  content: typeof savedItem.content === "string" ? savedItem.content : item.content,
-                  kcal: typeof savedItem.kcal === "string" ? savedItem.kcal : item.kcal
+                  content: typeof savedItem.content === "string" ? savedItem.content : baseItem.content,
+                  kcal: typeof savedItem.kcal === "string" ? savedItem.kcal : baseItem.kcal
                 };
               });
+
+              if (
+                meal.key === "breakfast" &&
+                merged.meals[meal.key].length > 1
+              ) {
+                var lastBreakfastItem = merged.meals[meal.key][merged.meals[meal.key].length - 1];
+                if (
+                  lastBreakfastItem &&
+                  !String(lastBreakfastItem.content || "").trim() &&
+                  !String(lastBreakfastItem.kcal || "").trim()
+                ) {
+                  merged.meals[meal.key].pop();
+                }
+              }
+
+              if (meal.key === "dinner") {
+                var appleIndex = merged.meals[meal.key].findIndex(function (item) {
+                  return item && String(item.content || "").trim() === "りんご";
+                });
+
+                if (appleIndex > 0) {
+                  var beforeAppleItem = merged.meals[meal.key][appleIndex - 1];
+                  if (
+                    beforeAppleItem &&
+                    !String(beforeAppleItem.content || "").trim() &&
+                    !String(beforeAppleItem.kcal || "").trim()
+                  ) {
+                    merged.meals[meal.key].splice(appleIndex - 1, 1);
+                    appleIndex -= 1;
+                  }
+                }
+
+                if (appleIndex >= 0 && appleIndex < merged.meals[meal.key].length - 1) {
+                  var afterAppleItem = merged.meals[meal.key][appleIndex + 1];
+                  if (
+                    afterAppleItem &&
+                    !String(afterAppleItem.content || "").trim() &&
+                    !String(afterAppleItem.kcal || "").trim()
+                  ) {
+                    merged.meals[meal.key].splice(appleIndex + 1, 1);
+                  }
+                }
+              }
             }
           });
         }
@@ -917,6 +970,75 @@
         return nextMeals;
       }
 
+      function pruneTargetedMealBlanks(meals) {
+        var nextMeals = deepClone(meals || {});
+        var breakfastItems = Array.isArray(nextMeals.breakfast) ? nextMeals.breakfast : [];
+        var dinnerItems = Array.isArray(nextMeals.dinner) ? nextMeals.dinner : [];
+        var appleIndex;
+        var saladIndex;
+
+        if (breakfastItems.length > 1) {
+          var lastBreakfastItem = breakfastItems[breakfastItems.length - 1];
+          if (
+            lastBreakfastItem &&
+            !String(lastBreakfastItem.content || "").trim() &&
+            !String(lastBreakfastItem.kcal || "").trim()
+          ) {
+            breakfastItems.pop();
+          }
+        }
+
+        if (dinnerItems.length) {
+          saladIndex = dinnerItems.findIndex(function (item) {
+            return item && String(item.content || "").trim() === "サラダ：大根、きゅうり、紫キャベツ、人参、水菜、めかぶ";
+          });
+
+          appleIndex = dinnerItems.findIndex(function (item) {
+            return item && String(item.content || "").trim() === "りんご";
+          });
+          var warmTeaIndex = dinnerItems.findIndex(function (item) {
+            return item && String(item.content || "").trim() === "あったかい麦茶200ml×2";
+          });
+
+          if (saladIndex >= 0 && appleIndex > saladIndex) {
+            var betweenItems = dinnerItems.slice(saladIndex + 1, appleIndex);
+            dinnerItems.splice(
+              saladIndex + 1,
+              betweenItems.length,
+              createEmptyMealItem(),
+              createEmptyMealItem()
+            );
+            appleIndex = saladIndex + 3;
+          }
+
+          if (appleIndex >= 0 && appleIndex < dinnerItems.length - 1) {
+            var afterAppleItem = dinnerItems[appleIndex + 1];
+            if (
+              afterAppleItem &&
+              !String(afterAppleItem.content || "").trim() &&
+              !String(afterAppleItem.kcal || "").trim()
+            ) {
+              dinnerItems.splice(appleIndex + 1, 1);
+            }
+          }
+
+          if (warmTeaIndex >= 0 && warmTeaIndex < dinnerItems.length - 1) {
+            var afterWarmTeaItem = dinnerItems[warmTeaIndex + 1];
+            if (
+              afterWarmTeaItem &&
+              !String(afterWarmTeaItem.content || "").trim() &&
+              !String(afterWarmTeaItem.kcal || "").trim()
+            ) {
+              dinnerItems.splice(warmTeaIndex + 1, 1);
+            }
+          }
+        }
+
+        nextMeals.breakfast = breakfastItems;
+        nextMeals.dinner = dinnerItems;
+        return nextMeals;
+      }
+
       function cloneMeals(meals) {
         return deepClone(meals || {});
       }
@@ -932,7 +1054,7 @@
           return;
         }
 
-        mealDayHistory[state.date] = normalizeMealsCollection(state.meals);
+        mealDayHistory[state.date] = pruneTargetedMealBlanks(normalizeMealsCollection(state.meals));
         localStorage.setItem(mealDayHistoryStorageKey, JSON.stringify(mealDayHistory));
       }
 
@@ -941,14 +1063,14 @@
         var saved = mealDayHistory[previousDate];
 
         if (previousStateDate === previousDate && hasAnyMealContent(previousMeals)) {
-          return normalizeMealsCollection(previousMeals);
+          return pruneTargetedMealBlanks(normalizeMealsCollection(previousMeals));
         }
 
         if (saved && hasAnyMealContent(saved)) {
-          return normalizeMealsCollection(saved);
+          return pruneTargetedMealBlanks(normalizeMealsCollection(saved));
         }
 
-        return normalizeMealsCollection(defaultData.meals);
+        return pruneTargetedMealBlanks(normalizeMealsCollection(defaultData.meals));
       }
 
       function createMealMemoryId() {
@@ -1147,6 +1269,7 @@
       }
 
       var state = loadState();
+      state.meals = pruneTargetedMealBlanks(state.meals);
       var history = loadHistory();
       var mealDayHistory = loadMealDayHistory();
       var mealMemory = loadMealMemory();
@@ -1174,6 +1297,7 @@
       function saveState() {
         try {
           syncDerivedWeightLabels();
+          state.meals = pruneTargetedMealBlanks(state.meals);
           localStorage.setItem(storageKey, JSON.stringify(state));
           updateHistory();
           saveMealDayHistory();
@@ -1242,6 +1366,7 @@
         }
 
         syncDerivedWeightLabels();
+        state.meals = pruneTargetedMealBlanks(state.meals);
       }
 
       function parseKcal(value) {
@@ -1331,6 +1456,9 @@
             state[key] = node.value;
             if (key === "date") {
               syncWeightDatesWithRecordDate(previousDate, state.date);
+              if (!String(state.weight0Value || "").trim()) {
+                state.weight0Value = findPreviousWeightValue(state.date);
+              }
             }
             if (key === "weight0Period" || key === "weight1Period") {
               state[key] = normalizePeriod(state[key]);
@@ -1687,6 +1815,7 @@
       }
 
       function renderMeals() {
+        state.meals = pruneTargetedMealBlanks(state.meals);
         mealsRoot.innerHTML = "";
         mealConfig.forEach(function (meal) {
           var block = document.createElement("section");
