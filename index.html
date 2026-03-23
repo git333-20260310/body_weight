@@ -8,7 +8,6 @@
     :root {
       --bg: #f6f1e7;
       --panel: rgba(255, 252, 246, 0.96);
-      --panel-strong: #fffaf2;
       --line: #d7c8ae;
       --text: #2f2419;
       --sub: #6d5a48;
@@ -129,7 +128,7 @@
       border-radius: var(--field-radius);
       background: #fffdf9;
       color: var(--text);
-      padding: 12px 12px;
+      padding: 12px;
       appearance: none;
       -webkit-appearance: none;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
@@ -215,21 +214,10 @@
       align-items: start;
     }
 
-    .meal-row input {
-      min-width: 0;
-    }
-
     .meal-row-picker {
       display: grid;
       gap: 4px;
       justify-items: start;
-    }
-
-    .meal-row-main {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 92px;
-      gap: 8px;
-      align-items: start;
     }
 
     .meal-row-actions {
@@ -313,7 +301,7 @@
     }
 
     .meal-memory-panel {
-      margin-bottom: 16px;
+      margin-top: 16px;
       padding: 14px;
       border-radius: 16px;
       background: rgba(255, 249, 241, 0.9);
@@ -391,18 +379,6 @@
       gap: 8px;
     }
 
-    .button-small {
-      min-height: 42px;
-      padding: 11px 12px;
-      border-radius: 12px;
-    }
-
-    .danger {
-      background: #fff1eb;
-      color: #a14425;
-      border: 1px solid rgba(184, 92, 56, 0.28);
-    }
-
     .total-wrap {
       margin-top: 18px;
       padding: 12px;
@@ -430,6 +406,12 @@
       min-height: 48px;
     }
 
+    .button-small {
+      min-height: 42px;
+      padding: 11px 12px;
+      border-radius: 12px;
+    }
+
     .primary {
       background: linear-gradient(135deg, #c86d45, #a74f2e);
       color: #fff;
@@ -440,6 +422,12 @@
       background: #fff9f1;
       color: var(--accent-strong);
       border: 1px solid var(--line);
+    }
+
+    .danger {
+      background: #fff1eb;
+      color: #a14425;
+      border: 1px solid rgba(184, 92, 56, 0.28);
     }
 
     .status {
@@ -471,7 +459,7 @@
       .field.full {
         grid-column: 1 / -1;
       }
-      
+
       .weight-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -588,13 +576,22 @@
 
   <script>
     (function () {
-      var storageKey = "bodyWeightRecordApp_v1";
-      var historyStorageKey = "bodyWeightRecordHistory_v1";
-      var mealMemoryStorageKey = "bodyWeightMealMemory_v1";
-      var mealDayHistoryStorageKey = "bodyWeightMealDayHistory_v1";
-      var maxMealCandidates = 12;
-      var jstTimeZone = "Asia/Tokyo";
-      var defaultData = {
+      var STORAGE_KEYS = {
+        state: "bodyWeightRecordApp_v1",
+        history: "bodyWeightRecordHistory_v1",
+        mealMemory: "bodyWeightMealMemory_v1",
+        mealDays: "bodyWeightMealDayHistory_v1"
+      };
+      var JST_TIME_ZONE = "Asia/Tokyo";
+      var DATE_SWITCH_HOUR = 13;
+      var MAX_MEAL_CANDIDATES = 12;
+      var EMPTY_MEAL = { content: "", kcal: "" };
+      var MEAL_CONFIG = [
+        { key: "breakfast", label: "朝" },
+        { key: "lunch", label: "昼" },
+        { key: "dinner", label: "夜" }
+      ];
+      var DEFAULT_STATE = {
         date: "",
         height: "172",
         weight0Value: "",
@@ -615,14 +612,10 @@
             { content: "かぼちゃ", kcal: "30" },
             { content: "玉ねぎと温玉と納豆とめかぶと木綿豆腐のサラダに玉ねぎポン酢", kcal: "300" },
             { content: "", kcal: "" },
-            { content: "チョコクロワッサン", kcal: "340" },
-            { content: "", kcal: "" }
+            { content: "チョコクロワッサン", kcal: "340" }
           ],
           lunch: [
             { content: "水550ml", kcal: "0" },
-            { content: "", kcal: "" },
-            { content: "", kcal: "" },
-            { content: "", kcal: "" },
             { content: "", kcal: "" }
           ],
           dinner: [
@@ -630,25 +623,16 @@
             { content: "ミニトマト", kcal: "30" },
             { content: "刺身：", kcal: "165" },
             { content: "スープ：", kcal: "105" },
-            { content: "", kcal: "" },
             { content: "サラダ：大根、きゅうり、紫キャベツ、人参、水菜、めかぶ", kcal: "30" },
             { content: "", kcal: "" },
             { content: "", kcal: "" },
-            { content: "", kcal: "" },
             { content: "りんご", kcal: "75" },
-            { content: "", kcal: "" },
             { content: "あったかい麦茶200ml×2", kcal: "0" }
           ]
         }
       };
 
-      var mealConfig = [
-        { key: "breakfast", label: "朝" },
-        { key: "lunch", label: "昼" },
-        { key: "dinner", label: "夜" }
-      ];
-
-      function deepClone(value) {
+      function clone(value) {
         return JSON.parse(JSON.stringify(value));
       }
 
@@ -656,19 +640,86 @@
         return String(value).padStart(2, "0");
       }
 
-      function getJstDateParts(baseDate) {
+      function createEmptyMeal() {
+        return clone(EMPTY_MEAL);
+      }
+
+      function normalizeMealItem(item) {
+        if (!item || typeof item !== "object") {
+          return createEmptyMeal();
+        }
+
+        return {
+          content: typeof item.content === "string" ? item.content : "",
+          kcal: typeof item.kcal === "string" ? item.kcal : ""
+        };
+      }
+
+      function normalizeMeals(meals, fallbackMeals) {
+        var defaults = fallbackMeals || DEFAULT_STATE.meals;
+        var nextMeals = {};
+
+        MEAL_CONFIG.forEach(function (meal) {
+          var source = meals && Array.isArray(meals[meal.key]) ? meals[meal.key] : defaults[meal.key];
+          nextMeals[meal.key] = source.map(normalizeMealItem);
+          if (!nextMeals[meal.key].length) {
+            nextMeals[meal.key].push(createEmptyMeal());
+          }
+        });
+
+        return nextMeals;
+      }
+
+      function normalizeMealContent(value) {
+        return String(value || "").replace(/\s+/g, " ").trim();
+      }
+
+      function normalizeMealKcal(value) {
+        return String(value || "").trim();
+      }
+
+      function hasMealValue(item) {
+        return Boolean(normalizeMealContent(item.content) || normalizeMealKcal(item.kcal));
+      }
+
+      function hasAnyMealContent(meals) {
+        return MEAL_CONFIG.some(function (meal) {
+          return (meals && meals[meal.key] || []).some(hasMealValue);
+        });
+      }
+
+      function loadJson(key, fallbackValue) {
+        try {
+          var raw = localStorage.getItem(key);
+          if (!raw) {
+            return clone(fallbackValue);
+          }
+
+          var parsed = JSON.parse(raw);
+          if (Array.isArray(fallbackValue)) {
+            return Array.isArray(parsed) ? parsed : clone(fallbackValue);
+          }
+          if (fallbackValue && typeof fallbackValue === "object") {
+            return parsed && typeof parsed === "object" ? parsed : clone(fallbackValue);
+          }
+          return parsed;
+        } catch (error) {
+          return clone(fallbackValue);
+        }
+      }
+
+      function getJstParts(baseDate) {
         var formatter = new Intl.DateTimeFormat("ja-JP", {
-          timeZone: jstTimeZone,
+          timeZone: JST_TIME_ZONE,
           year: "numeric",
           month: "2-digit",
           day: "2-digit",
           hour: "2-digit",
           weekday: "short"
         });
-        var parts = formatter.formatToParts(baseDate || new Date());
         var map = {};
 
-        parts.forEach(function (part) {
+        formatter.formatToParts(baseDate || new Date()).forEach(function (part) {
           if (part.type !== "literal") {
             map[part.type] = part.value;
           }
@@ -677,27 +728,15 @@
         return map;
       }
 
-      function getJstTodayInputValue() {
-        var parts = getJstDateParts(new Date());
-        var hour = Number(parts.hour || "0");
-        var baseDate;
-
-        if (hour < 13) {
-          baseDate = new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
-          baseDate.setDate(baseDate.getDate() - 1);
-          return formatDateInput(baseDate);
-        }
-
-        return [parts.year, parts.month, parts.day].join("-");
-      }
-
       function parseDateInput(value) {
         var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        var date;
+
         if (!match) {
           return null;
         }
 
-        var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
         if (
           date.getFullYear() !== Number(match[1]) ||
           date.getMonth() !== Number(match[2]) - 1 ||
@@ -713,11 +752,21 @@
         if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
           return "";
         }
+
         return [
           date.getFullYear(),
           pad2(date.getMonth() + 1),
           pad2(date.getDate())
         ].join("-");
+      }
+
+      function addDays(dateText, days) {
+        var date = parseDateInput(dateText);
+        if (!date) {
+          return "";
+        }
+        date.setDate(date.getDate() + days);
+        return formatDateInput(date);
       }
 
       function formatDateWithWeekday(dateText) {
@@ -740,12 +789,15 @@
         ].join("");
       }
 
-      function addDays(dateText, days) {
-        var date = parseDateInput(dateText);
-        if (!date) {
-          return "";
+      function getAppTodayInputValue() {
+        var parts = getJstParts(new Date());
+        var hour = Number(parts.hour || "0");
+        var date = new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+
+        if (hour < DATE_SWITCH_HOUR) {
+          date.setDate(date.getDate() - 1);
         }
-        date.setDate(date.getDate() + days);
+
         return formatDateInput(date);
       }
 
@@ -755,18 +807,21 @@
 
       function inferWeightDate(label, fallbackDate) {
         var match = String(label || "").trim().match(/^(\d{1,2})(朝|昼)$/);
+        var base;
+        var day;
+        var candidate;
+
         if (!match) {
           return fallbackDate;
         }
 
-        var base = parseDateInput(fallbackDate);
+        base = parseDateInput(fallbackDate);
         if (!base) {
           return fallbackDate;
         }
 
-        var day = Number(match[1]);
-        var candidate = new Date(base.getFullYear(), base.getMonth(), day);
-
+        day = Number(match[1]);
+        candidate = new Date(base.getFullYear(), base.getMonth(), day);
         if (candidate.getDate() !== day) {
           return fallbackDate;
         }
@@ -791,496 +846,96 @@
         return normalizePeriod(fallbackPeriod);
       }
 
-      function syncDerivedWeightLabels() {
-        state.weight0Label = formatWeightLabel(state.weight0Date, state.weight0Period);
-        state.weight1Label = formatWeightLabel(state.weight1Date, state.weight1Period);
-      }
-
-      function ensureWeightFields() {
-        state.weight0Date = state.weight0Date || inferWeightDate(state.weight0Label, state.date);
-        state.weight0Period = inferWeightPeriod(state.weight0Label, state.weight0Period || "朝");
-        state.weight1Date = state.weight1Date || inferWeightDate(state.weight1Label, addDays(state.date, 1) || state.date);
-        state.weight1Period = inferWeightPeriod(state.weight1Label, state.weight1Period || "朝");
-        syncDerivedWeightLabels();
-      }
-
-      function loadHistory() {
-        try {
-          var raw = localStorage.getItem(historyStorageKey);
-          if (!raw) {
-            return {};
-          }
-
-          var parsed = JSON.parse(raw);
-          return parsed && typeof parsed === "object" ? parsed : {};
-        } catch (error) {
-          return {};
+      function formatWeightLabel(dateText, period) {
+        var date = parseDateInput(dateText);
+        if (!date) {
+          return normalizePeriod(period);
         }
+        return String(date.getDate()) + normalizePeriod(period);
       }
 
-      function loadMealDayHistory() {
-        try {
-          var raw = localStorage.getItem(mealDayHistoryStorageKey);
-          if (!raw) {
-            return {};
-          }
+      function mergeState(base, saved) {
+        var merged = clone(base);
 
-          var parsed = JSON.parse(raw);
-          return parsed && typeof parsed === "object" ? parsed : {};
-        } catch (error) {
-          return {};
-        }
-      }
-
-      function mergeData(base, saved) {
-        var merged = deepClone(base);
         if (!saved || typeof saved !== "object") {
+          merged.meals = normalizeMeals(base.meals);
           return merged;
         }
 
         Object.keys(merged).forEach(function (key) {
-          if (key === "meals") {
-            return;
-          }
-          if (typeof saved[key] === "string") {
+          if (key !== "meals" && typeof saved[key] === "string") {
             merged[key] = saved[key];
           }
         });
 
-        if (saved.meals && typeof saved.meals === "object") {
-          mealConfig.forEach(function (meal) {
-            if (Array.isArray(saved.meals[meal.key])) {
-              merged.meals[meal.key] = saved.meals[meal.key].map(function (savedItem, index) {
-                var baseItem = base.meals[meal.key][index] || { content: "", kcal: "" };
-                if (!savedItem || typeof savedItem !== "object") {
-                  return baseItem;
-                }
-                return {
-                  content: typeof savedItem.content === "string" ? savedItem.content : baseItem.content,
-                  kcal: typeof savedItem.kcal === "string" ? savedItem.kcal : baseItem.kcal
-                };
-              });
-
-              if (
-                meal.key === "breakfast" &&
-                merged.meals[meal.key].length > 1
-              ) {
-                var lastBreakfastItem = merged.meals[meal.key][merged.meals[meal.key].length - 1];
-                if (
-                  lastBreakfastItem &&
-                  !String(lastBreakfastItem.content || "").trim() &&
-                  !String(lastBreakfastItem.kcal || "").trim()
-                ) {
-                  merged.meals[meal.key].pop();
-                }
-              }
-
-              if (meal.key === "dinner") {
-                var appleIndex = merged.meals[meal.key].findIndex(function (item) {
-                  return item && String(item.content || "").trim() === "りんご";
-                });
-
-                if (appleIndex > 0) {
-                  var beforeAppleItem = merged.meals[meal.key][appleIndex - 1];
-                  if (
-                    beforeAppleItem &&
-                    !String(beforeAppleItem.content || "").trim() &&
-                    !String(beforeAppleItem.kcal || "").trim()
-                  ) {
-                    merged.meals[meal.key].splice(appleIndex - 1, 1);
-                    appleIndex -= 1;
-                  }
-                }
-
-                if (appleIndex >= 0 && appleIndex < merged.meals[meal.key].length - 1) {
-                  var afterAppleItem = merged.meals[meal.key][appleIndex + 1];
-                  if (
-                    afterAppleItem &&
-                    !String(afterAppleItem.content || "").trim() &&
-                    !String(afterAppleItem.kcal || "").trim()
-                  ) {
-                    merged.meals[meal.key].splice(appleIndex + 1, 1);
-                  }
-                }
-              }
-            }
-          });
-        }
-
+        merged.meals = normalizeMeals(saved.meals, base.meals);
         return merged;
       }
 
       function loadState() {
-        try {
-          var raw = localStorage.getItem(storageKey);
-          if (!raw) {
-            return deepClone(defaultData);
-          }
-          return mergeData(defaultData, JSON.parse(raw));
-        } catch (error) {
-          return deepClone(defaultData);
+        return mergeState(DEFAULT_STATE, loadJson(STORAGE_KEYS.state, DEFAULT_STATE));
+      }
+
+      function sortMealMemory(a, b) {
+        if ((b.count || 0) !== (a.count || 0)) {
+          return (b.count || 0) - (a.count || 0);
         }
-      }
-
-      function normalizeMealContent(value) {
-        return String(value || "").replace(/\s+/g, " ").trim();
-      }
-
-      function normalizeMealKcal(value) {
-        return String(value || "").trim();
-      }
-
-      function createEmptyMealItem() {
-        return { content: "", kcal: "" };
-      }
-
-      function normalizeMealItem(item) {
-        if (!item || typeof item !== "object") {
-          return createEmptyMealItem();
+        if ((b.updatedAt || 0) !== (a.updatedAt || 0)) {
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
         }
+        return a.content.localeCompare(b.content, "ja");
+      }
 
+      function createMealMemoryEntry(content, kcal) {
         return {
-          content: typeof item.content === "string" ? item.content : "",
-          kcal: typeof item.kcal === "string" ? item.kcal : ""
-        };
-      }
-
-      function hasMealItemValue(item) {
-        return Boolean(normalizeMealContent(item.content) || normalizeMealKcal(item.kcal));
-      }
-
-      function normalizeMealRows(items) {
-        var normalized = Array.isArray(items) ? items.map(normalizeMealItem) : [];
-
-        while (normalized.length && !hasMealItemValue(normalized[normalized.length - 1])) {
-          normalized.pop();
-        }
-
-        normalized.push(createEmptyMealItem());
-        return normalized;
-      }
-
-      function normalizeMealsCollection(meals) {
-        var nextMeals = {};
-
-        mealConfig.forEach(function (meal) {
-          nextMeals[meal.key] = normalizeMealRows(meals && meals[meal.key]);
-        });
-
-        return nextMeals;
-      }
-
-      function pruneTargetedMealBlanks(meals) {
-        var nextMeals = deepClone(meals || {});
-        var breakfastItems = Array.isArray(nextMeals.breakfast) ? nextMeals.breakfast : [];
-        var dinnerItems = Array.isArray(nextMeals.dinner) ? nextMeals.dinner : [];
-        var appleIndex;
-        var saladIndex;
-
-        if (breakfastItems.length > 1) {
-          var lastBreakfastItem = breakfastItems[breakfastItems.length - 1];
-          if (
-            lastBreakfastItem &&
-            !String(lastBreakfastItem.content || "").trim() &&
-            !String(lastBreakfastItem.kcal || "").trim()
-          ) {
-            breakfastItems.pop();
-          }
-        }
-
-        if (dinnerItems.length) {
-          saladIndex = dinnerItems.findIndex(function (item) {
-            return item && String(item.content || "").trim() === "サラダ：大根、きゅうり、紫キャベツ、人参、水菜、めかぶ";
-          });
-
-          appleIndex = dinnerItems.findIndex(function (item) {
-            return item && String(item.content || "").trim() === "りんご";
-          });
-          var warmTeaIndex = dinnerItems.findIndex(function (item) {
-            return item && String(item.content || "").trim() === "あったかい麦茶200ml×2";
-          });
-
-          if (saladIndex >= 0 && appleIndex > saladIndex) {
-            var betweenItems = dinnerItems.slice(saladIndex + 1, appleIndex);
-            dinnerItems.splice(
-              saladIndex + 1,
-              betweenItems.length,
-              createEmptyMealItem(),
-              createEmptyMealItem()
-            );
-            appleIndex = saladIndex + 3;
-          }
-
-          if (appleIndex >= 0 && appleIndex < dinnerItems.length - 1) {
-            var afterAppleItem = dinnerItems[appleIndex + 1];
-            if (
-              afterAppleItem &&
-              !String(afterAppleItem.content || "").trim() &&
-              !String(afterAppleItem.kcal || "").trim()
-            ) {
-              dinnerItems.splice(appleIndex + 1, 1);
-            }
-          }
-
-          if (warmTeaIndex >= 0 && warmTeaIndex < dinnerItems.length - 1) {
-            var afterWarmTeaItem = dinnerItems[warmTeaIndex + 1];
-            if (
-              afterWarmTeaItem &&
-              !String(afterWarmTeaItem.content || "").trim() &&
-              !String(afterWarmTeaItem.kcal || "").trim()
-            ) {
-              dinnerItems.splice(warmTeaIndex + 1, 1);
-            }
-          }
-        }
-
-        nextMeals.breakfast = breakfastItems;
-        nextMeals.dinner = dinnerItems;
-        return nextMeals;
-      }
-
-      function cloneMeals(meals) {
-        return deepClone(meals || {});
-      }
-
-      function hasAnyMealContent(meals) {
-        return mealConfig.some(function (meal) {
-          return (meals && meals[meal.key] || []).some(hasMealItemValue);
-        });
-      }
-
-      function saveMealDayHistory() {
-        if (!state.date) {
-          return;
-        }
-
-        mealDayHistory[state.date] = pruneTargetedMealBlanks(normalizeMealsCollection(state.meals));
-        localStorage.setItem(mealDayHistoryStorageKey, JSON.stringify(mealDayHistory));
-      }
-
-      function getMealsForCarryOver(targetDate, previousStateDate, previousMeals) {
-        var previousDate = addDays(targetDate, -1);
-        var saved = mealDayHistory[previousDate];
-
-        if (previousStateDate === previousDate && hasAnyMealContent(previousMeals)) {
-          return pruneTargetedMealBlanks(normalizeMealsCollection(previousMeals));
-        }
-
-        if (saved && hasAnyMealContent(saved)) {
-          return pruneTargetedMealBlanks(normalizeMealsCollection(saved));
-        }
-
-        return pruneTargetedMealBlanks(normalizeMealsCollection(defaultData.meals));
-      }
-
-      function createMealMemoryId() {
-        return "meal_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-      }
-
-      function sortMealMemoryList(list) {
-        return list.sort(function (a, b) {
-          if ((b.count || 0) !== (a.count || 0)) {
-            return (b.count || 0) - (a.count || 0);
-          }
-          if ((b.updatedAt || 0) !== (a.updatedAt || 0)) {
-            return (b.updatedAt || 0) - (a.updatedAt || 0);
-          }
-          return a.content.localeCompare(b.content, "ja");
-        });
-      }
-
-      function normalizeMealMemoryItem(item) {
-        var content = normalizeMealContent(item && item.content);
-        if (!content) {
-          return null;
-        }
-
-        return {
-          id: typeof item.id === "string" && item.id ? item.id : createMealMemoryId(),
-          content: content,
-          kcal: normalizeMealKcal(item.kcal),
-          count: Math.max(1, Number(item.count) || 1),
-          updatedAt: Number(item.updatedAt) || Date.now()
+          id: "meal_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          content: normalizeMealContent(content),
+          kcal: normalizeMealKcal(kcal),
+          count: 1,
+          updatedAt: Date.now()
         };
       }
 
       function loadMealMemory() {
-        try {
-          var raw = localStorage.getItem(mealMemoryStorageKey);
-          if (!raw) {
-            return [];
+        var rawList = loadJson(STORAGE_KEYS.mealMemory, []);
+        var mergedMap = {};
+
+        rawList.forEach(function (item) {
+          var content = normalizeMealContent(item && item.content);
+          var current;
+
+          if (!content) {
+            return;
           }
 
-          var parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed)) {
-            return [];
+          current = mergedMap[content] || {
+            id: typeof item.id === "string" && item.id ? item.id : createMealMemoryEntry(content, item.kcal).id,
+            content: content,
+            kcal: normalizeMealKcal(item.kcal),
+            count: 0,
+            updatedAt: 0
+          };
+
+          current.count += Math.max(1, Number(item.count) || 1);
+          if ((Number(item.updatedAt) || 0) >= current.updatedAt) {
+            current.kcal = normalizeMealKcal(item.kcal);
+            current.updatedAt = Number(item.updatedAt) || Date.now();
           }
-
-          var mergedMap = {};
-          parsed.forEach(function (item) {
-            var normalized = normalizeMealMemoryItem(item);
-            var key;
-            if (!normalized) {
-              return;
-            }
-
-            key = normalized.content;
-            if (!mergedMap[key]) {
-              mergedMap[key] = normalized;
-              return;
-            }
-
-            mergedMap[key].count += normalized.count;
-            if (normalized.updatedAt >= mergedMap[key].updatedAt) {
-              mergedMap[key].kcal = normalized.kcal;
-              mergedMap[key].updatedAt = normalized.updatedAt;
-            }
-          });
-
-          return sortMealMemoryList(Object.keys(mergedMap).map(function (key) {
-            return mergedMap[key];
-          }));
-        } catch (error) {
-          return [];
-        }
-      }
-
-      function saveMealMemory() {
-        localStorage.setItem(mealMemoryStorageKey, JSON.stringify(sortMealMemoryList(mealMemory.slice())));
-      }
-
-      function seedMealMemoryFromState() {
-        var seeded = [];
-        mealConfig.forEach(function (meal) {
-          state.meals[meal.key].forEach(function (item) {
-            var content = normalizeMealContent(item.content);
-            var kcal = normalizeMealKcal(item.kcal);
-            var existing;
-
-            if (!content) {
-              return;
-            }
-
-            existing = seeded.find(function (entry) {
-              return entry.content === content;
-            });
-
-            if (existing) {
-              existing.count += 1;
-              if (kcal) {
-                existing.kcal = kcal;
-              }
-              existing.updatedAt = Date.now();
-              return;
-            }
-
-            seeded.push({
-              id: createMealMemoryId(),
-              content: content,
-              kcal: kcal,
-              count: 1,
-              updatedAt: Date.now()
-            });
-          });
+          mergedMap[content] = current;
         });
 
-        return sortMealMemoryList(seeded);
-      }
-
-      function findMealMemoryById(id) {
-        return mealMemory.find(function (item) {
-          return item.id === id;
-        }) || null;
-      }
-
-      function findMealMemoryByContent(content, excludeId) {
-        var normalizedContent = normalizeMealContent(content);
-        return mealMemory.find(function (item) {
-          return item.id !== excludeId && item.content === normalizedContent;
-        }) || null;
-      }
-
-      function upsertMealMemory(content, kcal, options) {
-        var normalizedContent = normalizeMealContent(content);
-        var normalizedKcal = normalizeMealKcal(kcal);
-        var settings = options || {};
-        var existing;
-        var now;
-        var nextCount;
-
-        if (!normalizedContent) {
-          return null;
-        }
-
-        existing = findMealMemoryByContent(normalizedContent);
-        now = Date.now();
-
-        if (existing) {
-          nextCount = settings.increment ? (existing.count || 0) + 1 : (existing.count || 0);
-          existing.count = Math.max(1, nextCount);
-          if (normalizedKcal || !existing.kcal) {
-            existing.kcal = normalizedKcal;
-          }
-          existing.updatedAt = now;
-          saveMealMemory();
-          return existing;
-        }
-
-        existing = {
-          id: createMealMemoryId(),
-          content: normalizedContent,
-          kcal: normalizedKcal,
-          count: Math.max(1, settings.increment ? 1 : 1),
-          updatedAt: now
-        };
-
-        mealMemory.push(existing);
-        saveMealMemory();
-        return existing;
-      }
-
-      function deleteMealMemory(id) {
-        mealMemory = mealMemory.filter(function (item) {
-          return item.id !== id;
-        });
-        saveMealMemory();
-      }
-
-      function getMealRowToken(mealKey, rowIndex) {
-        return mealKey + ":" + rowIndex;
-      }
-
-      function getMealRowSignature(content, kcal) {
-        var normalizedContent = normalizeMealContent(content);
-        if (!normalizedContent) {
-          return "";
-        }
-        return normalizedContent + "||" + normalizeMealKcal(kcal);
-      }
-
-      function buildMealCommitMap() {
-        var map = {};
-        mealConfig.forEach(function (meal) {
-          state.meals[meal.key].forEach(function (item, index) {
-            map[getMealRowToken(meal.key, index)] = getMealRowSignature(item.content, item.kcal);
-          });
-        });
-        return map;
+        return Object.keys(mergedMap).map(function (key) {
+          return mergedMap[key];
+        }).sort(sortMealMemory);
       }
 
       var state = loadState();
-      state.meals = pruneTargetedMealBlanks(state.meals);
-      var history = loadHistory();
-      var mealDayHistory = loadMealDayHistory();
+      var history = loadJson(STORAGE_KEYS.history, {});
+      var mealDayHistory = loadJson(STORAGE_KEYS.mealDays, {});
       var mealMemory = loadMealMemory();
       var editingMealMemoryId = "";
-      applyAutoDatesAndWeights();
-      ensureWeightFields();
-      if (!mealMemory.length) {
-        mealMemory = seedMealMemoryFromState();
-        saveMealMemory();
-      }
-      var mealCommitMap = buildMealCommitMap();
+      var mealCommitMap = {};
+
       var statusEl = document.getElementById("status");
       var mealsRoot = document.getElementById("meals-root");
       var totalKcalEl = document.getElementById("total-kcal");
@@ -1294,19 +949,20 @@
         statusEl.textContent = message || "";
       }
 
-      function saveState() {
-        try {
-          syncDerivedWeightLabels();
-          localStorage.setItem(storageKey, JSON.stringify(state));
-          updateHistory();
-          saveMealDayHistory();
-          setStatus("自動保存しました");
-        } catch (error) {
-          setStatus("保存に失敗しました");
-        }
+      function syncDerivedWeightLabels() {
+        state.weight0Label = formatWeightLabel(state.weight0Date, state.weight0Period);
+        state.weight1Label = formatWeightLabel(state.weight1Date, state.weight1Period);
       }
 
-      function updateHistory() {
+      function ensureWeightFields() {
+        state.weight0Date = state.weight0Date || inferWeightDate(state.weight0Label, state.date);
+        state.weight0Period = inferWeightPeriod(state.weight0Label, state.weight0Period || "朝");
+        state.weight1Date = state.weight1Date || inferWeightDate(state.weight1Label, addDays(state.date, 1) || state.date);
+        state.weight1Period = inferWeightPeriod(state.weight1Label, state.weight1Period || "朝");
+        syncDerivedWeightLabels();
+      }
+
+      function saveHistory() {
         if (!state.date) {
           return;
         }
@@ -1319,8 +975,28 @@
           weight1Date: state.weight1Date,
           weight1Period: state.weight1Period
         };
+        localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(history));
+      }
 
-        localStorage.setItem(historyStorageKey, JSON.stringify(history));
+      function saveMealDayHistory() {
+        if (!state.date) {
+          return;
+        }
+
+        mealDayHistory[state.date] = normalizeMeals(state.meals);
+        localStorage.setItem(STORAGE_KEYS.mealDays, JSON.stringify(mealDayHistory));
+      }
+
+      function saveMealMemory() {
+        localStorage.setItem(STORAGE_KEYS.mealMemory, JSON.stringify(mealMemory.slice().sort(sortMealMemory)));
+      }
+
+      function saveState(statusMessage) {
+        syncDerivedWeightLabels();
+        localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
+        saveHistory();
+        saveMealDayHistory();
+        setStatus(statusMessage || "自動保存しました");
       }
 
       function findPreviousWeightValue(targetDate) {
@@ -1329,63 +1005,88 @@
         if (previousRecord && previousRecord.weight1Date === targetDate && String(previousRecord.weight1Value || "").trim()) {
           return previousRecord.weight1Value;
         }
-
         if (previousRecord && previousRecord.weight0Date === targetDate && String(previousRecord.weight0Value || "").trim()) {
           return previousRecord.weight0Value;
         }
-
         return "";
       }
 
-      function applyAutoDatesAndWeights() {
-        var today = getJstTodayInputValue();
-        var tomorrow = addDays(today, 1);
-        var shouldRefreshDates = !state.date || state.date !== today;
-        var previousStateDate = state.date;
-        var previousMeals = cloneMeals(state.meals);
+      function getCarryOverMeals(targetDate, previousStateDate, previousMeals) {
+        var previousDate = addDays(targetDate, -1);
+        var savedMeals = mealDayHistory[previousDate];
 
-        if (shouldRefreshDates) {
-          state.date = today;
-          state.weight0Date = today;
+        if (previousStateDate === previousDate && hasAnyMealContent(previousMeals)) {
+          return normalizeMeals(previousMeals);
+        }
+        if (savedMeals && hasAnyMealContent(savedMeals)) {
+          return normalizeMeals(savedMeals);
+        }
+        return normalizeMeals(DEFAULT_STATE.meals);
+      }
+
+      function applyAutoDatesAndWeights() {
+        var appToday = getAppTodayInputValue();
+        var tomorrow = addDays(appToday, 1);
+        var previousDate = state.date;
+        var previousMeals = clone(state.meals);
+
+        if (!state.date || state.date !== appToday) {
+          state.date = appToday;
+          state.weight0Date = appToday;
           state.weight1Date = tomorrow;
           state.weight0Period = "朝";
           state.weight1Period = "朝";
-          state.weight0Value = findPreviousWeightValue(today);
+          state.weight0Value = findPreviousWeightValue(appToday);
           state.weight1Value = "";
           state.outputText = "";
-          state.meals = getMealsForCarryOver(today, previousStateDate, previousMeals);
+          state.meals = getCarryOverMeals(appToday, previousDate, previousMeals);
         } else {
-          state.weight0Date = state.weight0Date || today;
+          state.weight0Date = state.weight0Date || appToday;
           state.weight1Date = state.weight1Date || tomorrow;
-
           if (!String(state.weight0Value || "").trim()) {
-            state.weight0Value = findPreviousWeightValue(today);
+            state.weight0Value = findPreviousWeightValue(appToday);
           }
-
         }
 
-        syncDerivedWeightLabels();
+        ensureWeightFields();
       }
 
       function parseKcal(value) {
         var text = String(value || "").trim();
+        var match;
+
         if (!text) {
           return 0;
         }
-        var match = text.match(/-?\d+(\.\d+)?/);
+
+        match = text.match(/-?\d+(\.\d+)?/);
         return match ? Number(match[0]) : 0;
       }
 
       function updateTotalKcal() {
         var total = 0;
-        mealConfig.forEach(function (meal) {
+
+        MEAL_CONFIG.forEach(function (meal) {
           state.meals[meal.key].forEach(function (item) {
             total += parseKcal(item.kcal);
           });
         });
-        var display = Number.isInteger(total) ? String(total) : String(total);
-        totalKcalEl.value = display;
-        return display;
+
+        totalKcalEl.value = String(total);
+        return String(total);
+      }
+
+      function updateDateNotes() {
+        [
+          { id: "record-date-note", value: state.date },
+          { id: "weight0-date-note", value: state.weight0Date },
+          { id: "weight1-date-note", value: state.weight1Date }
+        ].forEach(function (item) {
+          var noteEl = document.getElementById(item.id);
+          if (noteEl) {
+            noteEl.textContent = formatDateWithWeekday(item.value);
+          }
+        });
       }
 
       function updateWeightFieldInputs() {
@@ -1410,47 +1111,49 @@
         updateDateNotes();
       }
 
-      function updateDateNotes() {
-        var notes = [
-          { id: "record-date-note", value: state.date },
-          { id: "weight0-date-note", value: state.weight0Date },
-          { id: "weight1-date-note", value: state.weight1Date }
-        ];
-
-        notes.forEach(function (item) {
-          var noteEl = document.getElementById(item.id);
-          if (noteEl) {
-            noteEl.textContent = formatDateWithWeekday(item.value);
-          }
-        });
-      }
-
       function syncWeightDatesWithRecordDate(previousDate, nextDate) {
-        var previousSecondDate = addDays(previousDate, 1);
-        var nextSecondDate = addDays(nextDate, 1);
+        var previousNextDate = addDays(previousDate, 1);
+        var nextNextDate = addDays(nextDate, 1);
 
         if (!state.weight0Date || state.weight0Date === previousDate) {
           state.weight0Date = nextDate;
         }
-
-        if (!state.weight1Date || state.weight1Date === previousSecondDate) {
-          state.weight1Date = nextSecondDate || nextDate;
+        if (!state.weight1Date || state.weight1Date === previousNextDate) {
+          state.weight1Date = nextNextDate || nextDate;
         }
 
         syncDerivedWeightLabels();
         updateWeightFieldInputs();
       }
 
+      function getMealSignature(item) {
+        var content = normalizeMealContent(item.content);
+        if (!content) {
+          return "";
+        }
+        return content + "||" + normalizeMealKcal(item.kcal);
+      }
+
+      function rebuildMealCommitMap() {
+        mealCommitMap = {};
+        MEAL_CONFIG.forEach(function (meal) {
+          state.meals[meal.key].forEach(function (item, index) {
+            mealCommitMap[meal.key + ":" + index] = getMealSignature(item);
+          });
+        });
+      }
+
       function bindSimpleFields() {
-        var nodes = document.querySelectorAll("[data-key]");
-        nodes.forEach(function (node) {
+        document.querySelectorAll("[data-key]").forEach(function (node) {
           var key = node.getAttribute("data-key");
           if (!Object.prototype.hasOwnProperty.call(state, key)) {
             return;
           }
+
           node.value = state[key];
-          var handleUpdate = function () {
+          function handleUpdate() {
             var previousDate = key === "date" ? state.date : "";
+
             state[key] = node.value;
             if (key === "date") {
               syncWeightDatesWithRecordDate(previousDate, state.date);
@@ -1461,139 +1164,111 @@
             if (key === "weight0Period" || key === "weight1Period") {
               state[key] = normalizePeriod(state[key]);
             }
+
             saveState();
-          };
+          }
+
           node.addEventListener("input", handleUpdate);
           node.addEventListener("change", handleUpdate);
         });
       }
 
+      function findMealMemoryById(id) {
+        return mealMemory.find(function (item) {
+          return item.id === id;
+        }) || null;
+      }
+
+      function findMealMemoryByContent(content, excludeId) {
+        var normalizedContent = normalizeMealContent(content);
+        return mealMemory.find(function (item) {
+          return item.id !== excludeId && item.content === normalizedContent;
+        }) || null;
+      }
+
+      function upsertMealMemory(content, kcal, shouldIncrement) {
+        var normalizedContent = normalizeMealContent(content);
+        var normalizedKcal = normalizeMealKcal(kcal);
+        var existing;
+
+        if (!normalizedContent) {
+          return null;
+        }
+
+        existing = findMealMemoryByContent(normalizedContent);
+        if (existing) {
+          existing.count = shouldIncrement ? existing.count + 1 : existing.count;
+          existing.kcal = normalizedKcal || existing.kcal;
+          existing.updatedAt = Date.now();
+          saveMealMemory();
+          return existing;
+        }
+
+        existing = createMealMemoryEntry(normalizedContent, normalizedKcal);
+        mealMemory.push(existing);
+        saveMealMemory();
+        return existing;
+      }
+
+      function seedMealMemoryFromCurrentMeals() {
+        MEAL_CONFIG.forEach(function (meal) {
+          state.meals[meal.key].forEach(function (item) {
+            if (normalizeMealContent(item.content)) {
+              upsertMealMemory(item.content, item.kcal, false);
+            }
+          });
+        });
+      }
+
       function getMealMemoryOptions() {
-        return sortMealMemoryList(mealMemory.slice());
+        return mealMemory.slice().sort(sortMealMemory);
       }
 
       function populateMealCandidateSelect(selectEl, currentContent) {
-        var options = getMealMemoryOptions().slice(0, maxMealCandidates);
+        var options = getMealMemoryOptions().slice(0, MAX_MEAL_CANDIDATES);
         var matched = findMealMemoryByContent(currentContent);
         var matchedInTop = matched && options.some(function (item) {
           return item.id === matched.id;
         });
 
         selectEl.innerHTML = "";
-
-        var placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = "候補から選択";
-        selectEl.appendChild(placeholder);
+        selectEl.appendChild(new Option("候補から選択", ""));
 
         options.forEach(function (item) {
-          var option = document.createElement("option");
-          option.value = item.id;
-          option.textContent = item.content + (item.kcal ? " / " + item.kcal + "kcal" : "");
-          selectEl.appendChild(option);
+          selectEl.appendChild(new Option(item.content + (item.kcal ? " / " + item.kcal + "kcal" : ""), item.id));
         });
 
         if (matched && !matchedInTop) {
-          var currentOption = document.createElement("option");
-          currentOption.value = matched.id;
-          currentOption.textContent = matched.content + (matched.kcal ? " / " + matched.kcal + "kcal" : "");
-          selectEl.appendChild(currentOption);
+          selectEl.appendChild(new Option(matched.content + (matched.kcal ? " / " + matched.kcal + "kcal" : ""), matched.id));
         }
 
         selectEl.value = matched ? matched.id : "";
       }
 
       function refreshMealCandidateSelects() {
-        var selects = document.querySelectorAll(".meal-candidate-select");
-        selects.forEach(function (selectEl) {
+        document.querySelectorAll(".meal-candidate-select").forEach(function (selectEl) {
           var mealKey = selectEl.getAttribute("data-meal-key");
           var rowIndex = Number(selectEl.getAttribute("data-row-index"));
-          var currentItem = state.meals[mealKey] && state.meals[mealKey][rowIndex];
-          populateMealCandidateSelect(selectEl, currentItem ? currentItem.content : "");
+          var item = state.meals[mealKey] && state.meals[mealKey][rowIndex];
+          populateMealCandidateSelect(selectEl, item ? item.content : "");
         });
       }
 
-      function syncMealMemoryFromRow(mealKey, rowIndex, options) {
+      function syncMealMemoryFromRow(mealKey, rowIndex, shouldIncrement) {
         var item = state.meals[mealKey][rowIndex];
-        var token = getMealRowToken(mealKey, rowIndex);
-        var nextSignature = getMealRowSignature(item.content, item.kcal);
+        var token = mealKey + ":" + rowIndex;
+        var nextSignature = getMealSignature(item);
         var previousSignature = mealCommitMap[token] || "";
-        var settings = options || {};
-        var shouldIncrement = Boolean(settings.increment && nextSignature && nextSignature !== previousSignature);
-
-        if (!nextSignature) {
-          mealCommitMap[token] = "";
-          return null;
-        }
+        var increment = Boolean(shouldIncrement && nextSignature && nextSignature !== previousSignature);
 
         mealCommitMap[token] = nextSignature;
-        return upsertMealMemory(item.content, item.kcal, { increment: shouldIncrement });
-      }
-
-      function startMealMemoryEdit(id) {
-        var target = findMealMemoryById(id);
-        if (!target) {
-          return;
-        }
-
-        editingMealMemoryId = id;
-        mealMemoryContentEl.value = target.content;
-        mealMemoryKcalEl.value = target.kcal;
-        mealMemoryEditorEl.hidden = false;
-        mealMemoryContentEl.focus();
-      }
-
-      function stopMealMemoryEdit() {
-        editingMealMemoryId = "";
-        mealMemoryContentEl.value = "";
-        mealMemoryKcalEl.value = "";
-        mealMemoryEditorEl.hidden = true;
-      }
-
-      function saveMealMemoryEdit() {
-        var target = findMealMemoryById(editingMealMemoryId);
-        var normalizedContent;
-        var normalizedKcal;
-        var duplicate;
-
-        if (!target) {
-          stopMealMemoryEdit();
-          return;
-        }
-
-        normalizedContent = normalizeMealContent(mealMemoryContentEl.value);
-        normalizedKcal = normalizeMealKcal(mealMemoryKcalEl.value);
-
-        if (!normalizedContent) {
-          setStatus("食事内容を入力してください");
-          mealMemoryContentEl.focus();
-          return;
-        }
-
-        duplicate = findMealMemoryByContent(normalizedContent, target.id);
-
-        if (duplicate) {
-          duplicate.count += target.count;
-          duplicate.kcal = normalizedKcal || duplicate.kcal;
-          duplicate.updatedAt = Date.now();
-          deleteMealMemory(target.id);
-        } else {
-          target.content = normalizedContent;
-          target.kcal = normalizedKcal;
-          target.updatedAt = Date.now();
-          saveMealMemory();
-        }
-
-        stopMealMemoryEdit();
-        renderMealMemoryList();
-        refreshMealCandidateSelects();
-        setStatus("よく使う食事を更新しました");
+        return upsertMealMemory(item.content, item.kcal, increment);
       }
 
       function renderMealMemoryList() {
         var items = getMealMemoryOptions();
-        mealMemoryListEl.innerHTML = "";
 
+        mealMemoryListEl.innerHTML = "";
         if (!items.length) {
           var emptyEl = document.createElement("div");
           emptyEl.className = "meal-memory-empty";
@@ -1604,28 +1279,31 @@
 
         items.forEach(function (item) {
           var card = document.createElement("div");
-          card.className = "meal-memory-item";
-
           var contentEl = document.createElement("div");
-          contentEl.className = "meal-memory-content";
-          contentEl.textContent = item.content;
-
           var metaEl = document.createElement("div");
-          metaEl.className = "meal-memory-meta";
-          metaEl.textContent = (item.kcal ? item.kcal + "kcal" : "kcal未設定") + " ・ 使用 " + item.count + "回";
-
           var actionsEl = document.createElement("div");
+          var editButton = document.createElement("button");
+          var deleteButton = document.createElement("button");
+
+          card.className = "meal-memory-item";
+          contentEl.className = "meal-memory-content";
+          metaEl.className = "meal-memory-meta";
           actionsEl.className = "meal-memory-item-actions";
 
-          var editButton = document.createElement("button");
+          contentEl.textContent = item.content;
+          metaEl.textContent = (item.kcal ? item.kcal + "kcal" : "kcal未設定") + " ・ 使用 " + item.count + "回";
+
           editButton.type = "button";
           editButton.className = "secondary button-small";
           editButton.textContent = "編集";
           editButton.addEventListener("click", function () {
-            startMealMemoryEdit(item.id);
+            editingMealMemoryId = item.id;
+            mealMemoryContentEl.value = item.content;
+            mealMemoryKcalEl.value = item.kcal;
+            mealMemoryEditorEl.hidden = false;
+            mealMemoryContentEl.focus();
           });
 
-          var deleteButton = document.createElement("button");
           deleteButton.type = "button";
           deleteButton.className = "danger button-small";
           deleteButton.textContent = "削除";
@@ -1633,10 +1311,14 @@
             if (!window.confirm("この候補を削除しますか？")) {
               return;
             }
+
+            mealMemory = mealMemory.filter(function (candidate) {
+              return candidate.id !== item.id;
+            });
             if (editingMealMemoryId === item.id) {
               stopMealMemoryEdit();
             }
-            deleteMealMemory(item.id);
+            saveMealMemory();
             renderMealMemoryList();
             refreshMealCandidateSelects();
             setStatus("よく使う食事を削除しました");
@@ -1651,50 +1333,127 @@
         });
       }
 
+      function stopMealMemoryEdit() {
+        editingMealMemoryId = "";
+        mealMemoryContentEl.value = "";
+        mealMemoryKcalEl.value = "";
+        mealMemoryEditorEl.hidden = true;
+      }
+
+      function saveMealMemoryEdit() {
+        var target = findMealMemoryById(editingMealMemoryId);
+        var nextContent = normalizeMealContent(mealMemoryContentEl.value);
+        var nextKcal = normalizeMealKcal(mealMemoryKcalEl.value);
+        var duplicate;
+
+        if (!target) {
+          stopMealMemoryEdit();
+          return;
+        }
+        if (!nextContent) {
+          setStatus("食事内容を入力してください");
+          mealMemoryContentEl.focus();
+          return;
+        }
+
+        duplicate = findMealMemoryByContent(nextContent, target.id);
+        if (duplicate) {
+          duplicate.count += target.count;
+          duplicate.kcal = nextKcal || duplicate.kcal;
+          duplicate.updatedAt = Date.now();
+          mealMemory = mealMemory.filter(function (item) {
+            return item.id !== target.id;
+          });
+        } else {
+          target.content = nextContent;
+          target.kcal = nextKcal;
+          target.updatedAt = Date.now();
+        }
+
+        saveMealMemory();
+        stopMealMemoryEdit();
+        renderMealMemoryList();
+        refreshMealCandidateSelects();
+        setStatus("よく使う食事を更新しました");
+      }
+
+      function openNativePicker(selectEl) {
+        if (typeof selectEl.showPicker === "function") {
+          try {
+            selectEl.showPicker();
+            return;
+          } catch (error) {
+          }
+        }
+
+        selectEl.focus();
+        window.setTimeout(function () {
+          try {
+            selectEl.click();
+          } catch (error) {
+          }
+        }, 0);
+      }
+
       function createMealRow(mealKey, rowIndex, item) {
         var row = document.createElement("div");
-        row.className = "meal-row";
-
         var pickerWrap = document.createElement("div");
-        pickerWrap.className = "meal-row-picker";
-
         var pickerToggle = document.createElement("button");
+        var pickerPanel = document.createElement("div");
+        var candidateSelect = document.createElement("select");
+        var mainRow = document.createElement("div");
+        var contentInput = document.createElement("input");
+        var kcalInput = document.createElement("input");
+        var removeButton = document.createElement("button");
+
+        row.className = "meal-row";
+        pickerWrap.className = "meal-row-picker";
+        pickerPanel.className = "meal-row-picker-panel";
+        pickerPanel.hidden = true;
+        mainRow.className = "meal-row-actions";
+
         pickerToggle.type = "button";
         pickerToggle.className = "meal-row-picker-toggle";
         pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
 
-        var pickerPanel = document.createElement("div");
-        pickerPanel.className = "meal-row-picker-panel";
-        pickerPanel.hidden = true;
-
-        var candidateSelect = document.createElement("select");
         candidateSelect.className = "meal-candidate-select";
         candidateSelect.setAttribute("data-meal-key", mealKey);
         candidateSelect.setAttribute("data-row-index", String(rowIndex));
         candidateSelect.setAttribute("aria-label", mealKey + " 候補 " + (rowIndex + 1));
         populateMealCandidateSelect(candidateSelect, item.content);
 
-        var contentInput = document.createElement("input");
         contentInput.type = "text";
         contentInput.value = item.content;
         contentInput.placeholder = "内容";
         contentInput.setAttribute("aria-label", mealKey + " 内容 " + (rowIndex + 1));
 
-        var kcalInput = document.createElement("input");
         kcalInput.type = "text";
         kcalInput.inputMode = "decimal";
         kcalInput.value = item.kcal;
         kcalInput.placeholder = "kcal";
         kcalInput.setAttribute("aria-label", mealKey + " kcal " + (rowIndex + 1));
 
-        var removeButton = document.createElement("button");
         removeButton.type = "button";
         removeButton.className = "meal-remove-row";
         removeButton.textContent = "−";
         removeButton.setAttribute("aria-label", mealKey + " 行削除 " + (rowIndex + 1));
 
-        var mainRow = document.createElement("div");
-        mainRow.className = "meal-row-actions";
+        function setPickerOpen(isOpen) {
+          pickerPanel.hidden = !isOpen;
+          if (isOpen) {
+            pickerToggle.classList.add("is-open");
+            pickerToggle.setAttribute("aria-label", mealKey + " 候補を閉じる " + (rowIndex + 1));
+          } else {
+            pickerToggle.classList.remove("is-open");
+            pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
+          }
+        }
+
+        function commitCurrentRow() {
+          syncMealMemoryFromRow(mealKey, rowIndex, true);
+          renderMealMemoryList();
+          refreshMealCandidateSelects();
+        }
 
         contentInput.addEventListener("input", function () {
           state.meals[mealKey][rowIndex].content = contentInput.value;
@@ -1709,57 +1468,22 @@
           populateMealCandidateSelect(candidateSelect, contentInput.value);
         });
 
-        function commitCurrentMeal() {
-          syncMealMemoryFromRow(mealKey, rowIndex, { increment: true });
-          renderMealMemoryList();
-          refreshMealCandidateSelects();
-        }
-
-        function setPickerOpen(isOpen) {
-          pickerPanel.hidden = !isOpen;
-          if (isOpen) {
-            pickerToggle.classList.add("is-open");
-            pickerToggle.setAttribute("aria-label", mealKey + " 候補を閉じる " + (rowIndex + 1));
-          } else {
-            pickerToggle.classList.remove("is-open");
-            pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
-          }
-        }
-
-        function openCandidatePicker() {
-          if (typeof candidateSelect.showPicker === "function") {
-            try {
-              candidateSelect.showPicker();
-              return;
-            } catch (error) {
-            }
-          }
-
-          candidateSelect.focus();
-
-          window.setTimeout(function () {
-            try {
-              candidateSelect.click();
-            } catch (error) {
-            }
-          }, 0);
-        }
-
-        contentInput.addEventListener("blur", commitCurrentMeal);
-        contentInput.addEventListener("change", commitCurrentMeal);
-        kcalInput.addEventListener("blur", commitCurrentMeal);
-        kcalInput.addEventListener("change", commitCurrentMeal);
+        contentInput.addEventListener("blur", commitCurrentRow);
+        contentInput.addEventListener("change", commitCurrentRow);
+        kcalInput.addEventListener("blur", commitCurrentRow);
+        kcalInput.addEventListener("change", commitCurrentRow);
 
         pickerToggle.addEventListener("click", function () {
           setPickerOpen(pickerPanel.hidden);
           if (!pickerPanel.hidden) {
-            openCandidatePicker();
+            openNativePicker(candidateSelect);
           }
         });
 
         candidateSelect.addEventListener("change", function () {
           var selected = findMealMemoryById(candidateSelect.value);
-          var token = getMealRowToken(mealKey, rowIndex);
+          var token = mealKey + ":" + rowIndex;
+
           if (!selected) {
             setPickerOpen(false);
             return;
@@ -1769,8 +1493,8 @@
           state.meals[mealKey][rowIndex].kcal = selected.kcal;
           contentInput.value = selected.content;
           kcalInput.value = selected.kcal;
-          mealCommitMap[token] = getMealRowSignature(selected.content, selected.kcal);
-          upsertMealMemory(selected.content, selected.kcal, { increment: true });
+          mealCommitMap[token] = getMealSignature(state.meals[mealKey][rowIndex]);
+          upsertMealMemory(selected.content, selected.kcal, true);
           updateTotalKcal();
           saveState();
           renderMealMemoryList();
@@ -1787,15 +1511,10 @@
         });
 
         removeButton.addEventListener("click", function () {
-          var token = getMealRowToken(mealKey, rowIndex);
-
           state.meals[mealKey].splice(rowIndex, 1);
-          delete mealCommitMap[token];
-
           if (!state.meals[mealKey].length) {
-            state.meals[mealKey].push(createEmptyMealItem());
+            state.meals[mealKey].push(createEmptyMeal());
           }
-
           saveState();
           renderMeals();
           updateTotalKcal();
@@ -1814,94 +1533,73 @@
 
       function renderMeals() {
         mealsRoot.innerHTML = "";
-        mealConfig.forEach(function (meal) {
+
+        MEAL_CONFIG.forEach(function (meal) {
           var block = document.createElement("section");
-          block.className = "meal-block";
-          block.classList.add("meal-block-" + meal.key);
-
           var head = document.createElement("div");
-          head.className = "meal-head";
-
           var title = document.createElement("div");
-          title.className = "subsection-title";
-          title.textContent = meal.label;
-
           var note = document.createElement("div");
-          note.className = "meal-note";
-          note.textContent = "左: 内容 / 右: kcal";
-
-          head.appendChild(title);
-          head.appendChild(note);
-
           var list = document.createElement("div");
+          var addRowButton = document.createElement("button");
+
+          block.className = "meal-block meal-block-" + meal.key;
+          head.className = "meal-head";
+          title.className = "subsection-title";
+          note.className = "meal-note";
           list.className = "meal-list";
+
+          title.textContent = meal.label;
+          note.textContent = "左: 内容 / 右: kcal";
 
           state.meals[meal.key].forEach(function (item, index) {
             list.appendChild(createMealRow(meal.key, index, item));
           });
 
-          var addRowButton = document.createElement("button");
           addRowButton.type = "button";
           addRowButton.className = "meal-add-row";
           addRowButton.textContent = "＋ 1行追加";
           addRowButton.addEventListener("click", function () {
-            state.meals[meal.key].push(createEmptyMealItem());
+            state.meals[meal.key].push(createEmptyMeal());
             saveState();
             renderMeals();
           });
 
+          head.appendChild(title);
+          head.appendChild(note);
           block.appendChild(head);
           block.appendChild(list);
           block.appendChild(addRowButton);
           mealsRoot.appendChild(block);
         });
-      }
 
-      function formatWeightLabel(dateText, period) {
-        var date = parseDateInput(dateText);
-        var label = normalizePeriod(period);
-
-        if (!date) {
-          return label;
-        }
-
-        return String(date.getDate()) + label;
+        rebuildMealCommitMap();
       }
 
       function buildWeightText() {
         var parts = [];
         var firstValue = state.weight0Value.trim();
-        var firstLabel = formatWeightLabel(state.weight0Date, state.weight0Period);
         var secondValue = state.weight1Value.trim();
-        var secondLabel = formatWeightLabel(state.weight1Date, state.weight1Period);
 
         if (firstValue) {
-          parts.push(firstValue + (firstLabel ? "(" + firstLabel + ")" : ""));
+          parts.push(firstValue + "(" + formatWeightLabel(state.weight0Date, state.weight0Period) + ")");
         }
         if (secondValue) {
-          parts.push(secondValue + (secondLabel ? "(" + secondLabel + ")" : ""));
+          parts.push(secondValue + "(" + formatWeightLabel(state.weight1Date, state.weight1Period) + ")");
         }
 
         return parts.join("");
       }
 
       function collectMealLines(mealKey) {
-        return state.meals[mealKey]
-          .filter(function (item) {
-            return item.content.trim() || item.kcal.trim();
-          })
-          .map(function (item) {
-            var content = item.content.trim();
-            var kcal = item.kcal.trim() || "0";
-            return "・" + content + " " + kcal + "kcal";
-          });
+        return state.meals[mealKey].filter(hasMealValue).map(function (item) {
+          return "・" + item.content.trim() + " " + (item.kcal.trim() || "0") + "kcal";
+        });
       }
 
       function generateText() {
         var total = updateTotalKcal();
-        var recordDateText = formatDateWithWeekday(state.date) || state.date.trim();
         var lines = [
-          "日付:" + recordDateText,
+          "日付:" + (formatDateWithWeekday(state.date) || state.date.trim()),
           "身長(cm):" + state.height.trim(),
           "体重(kg)：" + buildWeightText(),
           "",
@@ -1926,45 +1624,48 @@
 
         state.outputText = lines.join("\n");
         outputEl.value = state.outputText;
-        saveState();
-        setStatus("テキストを生成しました");
+        saveState("テキストを生成しました");
       }
 
       function copyText() {
         var text = outputEl.value;
-        if (!text) {
-          generateText();
-          text = outputEl.value;
-        }
 
         function fallbackCopy() {
           outputEl.removeAttribute("readonly");
           outputEl.focus();
           outputEl.select();
           outputEl.setSelectionRange(0, outputEl.value.length);
-          var ok = false;
           try {
-            ok = document.execCommand("copy");
+            document.execCommand("copy");
+            setStatus("コピーしました");
           } catch (error) {
-            ok = false;
+            setStatus("コピーに失敗しました");
           }
           outputEl.setAttribute("readonly", "readonly");
-          setStatus(ok ? "コピーしました" : "コピーに失敗しました");
+        }
+
+        if (!text) {
+          generateText();
+          text = outputEl.value;
         }
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text).then(function () {
             setStatus("コピーしました");
-          }).catch(function () {
-            fallbackCopy();
-          });
-        } else {
-          fallbackCopy();
+          }).catch(fallbackCopy);
+          return;
         }
+
+        fallbackCopy();
       }
 
       function restoreOutput() {
         outputEl.value = state.outputText || "";
+      }
+
+      applyAutoDatesAndWeights();
+      if (!mealMemory.length) {
+        seedMealMemoryFromCurrentMeals();
       }
 
       renderMeals();
