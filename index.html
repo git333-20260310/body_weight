@@ -1297,7 +1297,6 @@
       function saveState() {
         try {
           syncDerivedWeightLabels();
-          state.meals = pruneTargetedMealBlanks(state.meals);
           localStorage.setItem(storageKey, JSON.stringify(state));
           updateHistory();
           saveMealDayHistory();
@@ -1366,7 +1365,6 @@
         }
 
         syncDerivedWeightLabels();
-        state.meals = pruneTargetedMealBlanks(state.meals);
       }
 
       function parseKcal(value) {
@@ -1815,7 +1813,6 @@
       }
 
       function renderMeals() {
-        state.meals = pruneTargetedMealBlanks(state.meals);
         mealsRoot.innerHTML = "";
         mealConfig.forEach(function (meal) {
           var block = document.createElement("section");
