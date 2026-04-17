@@ -1399,7 +1399,11 @@
         setStatus("よく使う食事を更新しました");
       }
 
-      function openNativePicker(selectEl) {
+            function openNativePicker(selectEl) {
+        if (selectEl && selectEl.options && selectEl.options.length > 1) {
+          selectEl.selectedIndex = 0;
+        }
+
         if (typeof selectEl.showPicker === "function") {
           try {
             selectEl.showPicker();
@@ -1535,13 +1539,13 @@
           }
         });
 
-        candidateSelect.addEventListener("change", function () {
+                function applySelectedCandidate() {
           var selected = findMealMemoryById(candidateSelect.value);
           var token = mealKey + ":" + rowIndex;
 
           if (!selected) {
             setPickerOpen(false);
-            return;
+            return false;
           }
 
           state.meals[mealKey][rowIndex].content = selected.content;
@@ -1555,11 +1559,18 @@
           renderMealMemoryList();
           refreshMealCandidateSelects();
           setPickerOpen(false);
-        });
+          return true;
+        }
+
+        candidateSelect.addEventListener("change", applySelectedCandidate);
+        candidateSelect.addEventListener("input", applySelectedCandidate);
 
         candidateSelect.addEventListener("blur", function () {
           window.setTimeout(function () {
             if (document.activeElement !== pickerToggle && document.activeElement !== candidateSearch) {
+              if (!applySelectedCandidate()) {
+                populateMealCandidateSelect(candidateSelect, contentInput.value, candidateSearch.value);
+              }
               setPickerOpen(false);
             }
           }, 120);
