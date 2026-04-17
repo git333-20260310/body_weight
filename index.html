@@ -1535,13 +1535,13 @@
           }
         });
 
-        candidateSelect.addEventListener("change", function () {
+        function applySelectedCandidate() {
           var selected = findMealMemoryById(candidateSelect.value);
           var token = mealKey + ":" + rowIndex;
 
           if (!selected) {
             setPickerOpen(false);
-            return;
+            return false;
           }
 
           state.meals[mealKey][rowIndex].content = selected.content;
@@ -1555,7 +1555,11 @@
           renderMealMemoryList();
           refreshMealCandidateSelects();
           setPickerOpen(false);
-        });
+          return true;
+        }
+
+        candidateSelect.addEventListener("change", applySelectedCandidate);
+        candidateSelect.addEventListener("input", applySelectedCandidate);
 
         candidateSelect.addEventListener("blur", function () {
           window.setTimeout(function () {
