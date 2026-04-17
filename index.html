@@ -1483,6 +1483,8 @@
         function applySelectedCandidate() {
           var selected = findMealMemoryById(candidateSelect.value);
           var token = mealKey + ":" + rowIndex;
+          var previousSignature = getMealSignature(state.meals[mealKey][rowIndex]);
+          var nextSignature;
 
           if (!selected) {
             setPickerOpen(false);
@@ -1493,8 +1495,9 @@
           state.meals[mealKey][rowIndex].kcal = selected.kcal;
           contentInput.value = selected.content;
           kcalInput.value = selected.kcal;
-          mealCommitMap[token] = getMealSignature(state.meals[mealKey][rowIndex]);
-          upsertMealMemory(selected.content, selected.kcal, true);
+          nextSignature = getMealSignature(state.meals[mealKey][rowIndex]);
+          mealCommitMap[token] = nextSignature;
+          upsertMealMemory(selected.content, selected.kcal, nextSignature !== previousSignature);
           updateTotalKcal();
           saveState();
           renderMealMemoryList();
@@ -1509,7 +1512,7 @@
         candidateSelect.addEventListener("blur", function () {
           window.setTimeout(function () {
             if (document.activeElement !== pickerToggle) {
-              setPickerOpen(false);
+              applySelectedCandidate();
             }
           }, 120);
         });
