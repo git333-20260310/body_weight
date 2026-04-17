@@ -584,7 +584,7 @@
       };
       var JST_TIME_ZONE = "Asia/Tokyo";
       var DATE_SWITCH_HOUR = 13;
-      var MAX_MEAL_CANDIDATES = 12;
+      var MAX_MEAL_CANDIDATES = 50;
       var EMPTY_MEAL = { content: "", kcal: "" };
       var MEAL_CONFIG = [
         { key: "breakfast", label: "朝" },
@@ -1266,7 +1266,7 @@
       }
 
       function renderMealMemoryList() {
-        var items = getMealMemoryOptions();
+        var items = getMealMemoryOptions().slice(0, MAX_MEAL_CANDIDATES);
 
         mealMemoryListEl.innerHTML = "";
         if (!items.length) {
@@ -1480,13 +1480,13 @@
           }
         });
 
-        candidateSelect.addEventListener("change", function () {
+        function applySelectedCandidate() {
           var selected = findMealMemoryById(candidateSelect.value);
           var token = mealKey + ":" + rowIndex;
 
           if (!selected) {
             setPickerOpen(false);
-            return;
+            return false;
           }
 
           state.meals[mealKey][rowIndex].content = selected.content;
@@ -1500,7 +1500,11 @@
           renderMealMemoryList();
           refreshMealCandidateSelects();
           setPickerOpen(false);
-        });
+          return true;
+        }
+
+        candidateSelect.addEventListener("change", applySelectedCandidate);
+        candidateSelect.addEventListener("input", applySelectedCandidate);
 
         candidateSelect.addEventListener("blur", function () {
           window.setTimeout(function () {
