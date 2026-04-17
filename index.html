@@ -259,19 +259,10 @@
 
     .meal-row-picker-panel {
       width: 100%;
-      display: grid;
-      gap: 8px;
     }
 
     .meal-row-picker-panel[hidden] {
       display: none;
-    }
-
-    .meal-candidate-search {
-      padding: 10px 12px;
-      min-height: 40px;
-      font-size: 0.88rem;
-      background: rgba(255, 253, 249, 0.92);
     }
 
     .meal-candidate-select {
@@ -685,10 +676,6 @@
 
       function normalizeMealKcal(value) {
         return String(value || "").trim();
-      }
-
-      function normalizeSearchText(value) {
-        return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
       }
 
       function hasMealValue(item) {
@@ -1237,22 +1224,15 @@
         return mealMemory.slice().sort(sortMealMemory);
       }
 
-      function populateMealCandidateSelect(selectEl, currentContent, filterText) {
-        var normalizedFilter = normalizeSearchText(filterText);
-        var options = getMealMemoryOptions().filter(function (item) {
-          if (!normalizedFilter) {
-            return true;
-          }
-          return normalizeSearchText(item.content).indexOf(normalizedFilter) !== -1;
-        }).slice(0, MAX_MEAL_CANDIDATES);
+      function populateMealCandidateSelect(selectEl, currentContent) {
+        var options = getMealMemoryOptions().slice(0, MAX_MEAL_CANDIDATES);
         var matched = findMealMemoryByContent(currentContent);
         var matchedInTop = matched && options.some(function (item) {
           return item.id === matched.id;
         });
-        var placeholder = normalizedFilter ? "候補を選択" : "候補から選択";
 
         selectEl.innerHTML = "";
-        selectEl.appendChild(new Option(placeholder, ""));
+        selectEl.appendChild(new Option("候補から選択", ""));
 
         options.forEach(function (item) {
           selectEl.appendChild(new Option(item.content + (item.kcal ? " / " + item.kcal + "kcal" : ""), item.id));
@@ -1270,9 +1250,7 @@
           var mealKey = selectEl.getAttribute("data-meal-key");
           var rowIndex = Number(selectEl.getAttribute("data-row-index"));
           var item = state.meals[mealKey] && state.meals[mealKey][rowIndex];
-          var searchEl = selectEl.parentNode.querySelector(".meal-candidate-search");
-          var filterText = searchEl ? searchEl.value : "";
-          populateMealCandidateSelect(selectEl, item ? item.content : "", filterText);
+          populateMealCandidateSelect(selectEl, item ? item.content : "");
         });
       }
 
@@ -1400,6 +1378,10 @@
       }
 
       function openNativePicker(selectEl) {
+        if (selectEl && selectEl.options && selectEl.options.length > 1) {
+          selectEl.selectedIndex = 0;
+        }
+
         if (typeof selectEl.showPicker === "function") {
           try {
             selectEl.showPicker();
@@ -1422,7 +1404,6 @@
         var pickerWrap = document.createElement("div");
         var pickerToggle = document.createElement("button");
         var pickerPanel = document.createElement("div");
-        var candidateSearch = document.createElement("input");
         var candidateSelect = document.createElement("select");
         var mainRow = document.createElement("div");
         var contentInput = document.createElement("input");
@@ -1439,19 +1420,11 @@
         pickerToggle.className = "meal-row-picker-toggle";
         pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
 
-        candidateSearch.type = "search";
-        candidateSearch.className = "meal-candidate-search";
-        candidateSearch.placeholder = "候補を検索";
-        candidateSearch.setAttribute("aria-label", mealKey + " 候補検索 " + (rowIndex + 1));
-        candidateSearch.setAttribute("autocomplete", "off");
-        candidateSearch.setAttribute("autocapitalize", "off");
-        candidateSearch.setAttribute("spellcheck", "false");
-
         candidateSelect.className = "meal-candidate-select";
         candidateSelect.setAttribute("data-meal-key", mealKey);
         candidateSelect.setAttribute("data-row-index", String(rowIndex));
         candidateSelect.setAttribute("aria-label", mealKey + " 候補 " + (rowIndex + 1));
-        populateMealCandidateSelect(candidateSelect, item.content, "");
+        populateMealCandidateSelect(candidateSelect, item.content);
 
         contentInput.type = "text";
         contentInput.value = item.content;
@@ -1474,14 +1447,9 @@
           if (isOpen) {
             pickerToggle.classList.add("is-open");
             pickerToggle.setAttribute("aria-label", mealKey + " 候補を閉じる " + (rowIndex + 1));
-            window.setTimeout(function () {
-              candidateSearch.focus();
-            }, 0);
           } else {
             pickerToggle.classList.remove("is-open");
             pickerToggle.setAttribute("aria-label", mealKey + " 候補を開く " + (rowIndex + 1));
-            candidateSearch.value = "";
-            populateMealCandidateSelect(candidateSelect, contentInput.value, "");
           }
         }
 
@@ -1494,14 +1462,14 @@
         contentInput.addEventListener("input", function () {
           state.meals[mealKey][rowIndex].content = contentInput.value;
           saveState();
-          populateMealCandidateSelect(candidateSelect, contentInput.value, candidateSearch.value);
+          populateMealCandidateSelect(candidateSelect, contentInput.value);
         });
 
         kcalInput.addEventListener("input", function () {
           state.meals[mealKey][rowIndex].kcal = kcalInput.value;
           updateTotalKcal();
           saveState();
-          populateMealCandidateSelect(candidateSelect, contentInput.value, candidateSearch.value);
+          populateMealCandidateSelect(candidateSelect, contentInput.value);
         });
 
         contentInput.addEventListener("blur", commitCurrentRow);
@@ -1510,38 +1478,19 @@
         kcalInput.addEventListener("change", commitCurrentRow);
 
         pickerToggle.addEventListener("click", function () {
-          var nextOpen = pickerPanel.hidden;
-          setPickerOpen(nextOpen);
-          if (nextOpen) {
-            populateMealCandidateSelect(candidateSelect, contentInput.value, candidateSearch.value);
-          }
-        });
-
-        candidateSearch.addEventListener("input", function () {
-          populateMealCandidateSelect(candidateSelect, contentInput.value, candidateSearch.value);
-          if (candidateSelect.options.length > 1) {
-            candidateSelect.selectedIndex = 1;
-          }
-        });
-
-        candidateSearch.addEventListener("keydown", function (event) {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
+          setPickerOpen(pickerPanel.hidden);
+          if (!pickerPanel.hidden) {
             openNativePicker(candidateSelect);
           }
-          if (event.key === "Escape") {
-            event.preventDefault();
-            setPickerOpen(false);
-          }
         });
 
-        candidateSelect.addEventListener("change", function () {
+        function applySelectedCandidate() {
           var selected = findMealMemoryById(candidateSelect.value);
           var token = mealKey + ":" + rowIndex;
 
           if (!selected) {
             setPickerOpen(false);
-            return;
+            return false;
           }
 
           state.meals[mealKey][rowIndex].content = selected.content;
@@ -1555,19 +1504,18 @@
           renderMealMemoryList();
           refreshMealCandidateSelects();
           setPickerOpen(false);
-        });
+          return true;
+        }
+
+        candidateSelect.addEventListener("change", applySelectedCandidate);
+        candidateSelect.addEventListener("input", applySelectedCandidate);
 
         candidateSelect.addEventListener("blur", function () {
           window.setTimeout(function () {
-            if (document.activeElement !== pickerToggle && document.activeElement !== candidateSearch) {
-              setPickerOpen(false);
-            }
-          }, 120);
-        });
-
-        candidateSearch.addEventListener("blur", function () {
-          window.setTimeout(function () {
-            if (document.activeElement !== pickerToggle && document.activeElement !== candidateSelect) {
+            if (document.activeElement !== pickerToggle) {
+              if (!applySelectedCandidate()) {
+                populateMealCandidateSelect(candidateSelect, contentInput.value);
+              }
               setPickerOpen(false);
             }
           }, 120);
@@ -1583,7 +1531,6 @@
           updateTotalKcal();
         });
 
-        pickerPanel.appendChild(candidateSearch);
         pickerPanel.appendChild(candidateSelect);
         pickerWrap.appendChild(pickerToggle);
         pickerWrap.appendChild(pickerPanel);
