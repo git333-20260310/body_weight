@@ -455,6 +455,93 @@
       white-space: pre-wrap;
     }
 
+
+    .history-panel {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: rgba(255, 252, 246, 0.96);
+      border: 1px solid rgba(215, 200, 174, 0.75);
+    }
+
+    .history-title {
+      margin-bottom: 12px;
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .summary-card {
+      padding: 12px;
+      border-radius: 14px;
+      background: #fff9f1;
+      border: 1px solid rgba(215, 200, 174, 0.8);
+    }
+
+    .summary-label {
+      color: var(--sub);
+      font-size: 0.86rem;
+    }
+
+    .summary-value {
+      margin-top: 4px;
+      color: var(--accent-strong);
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .graph-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(215, 200, 174, 0.75);
+      background: linear-gradient(180deg, rgba(255, 251, 245, 0.96), rgba(249, 244, 236, 0.96));
+    }
+
+    .graph-svg {
+      display: block;
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+    }
+
+    .graph-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      padding: 12px 2px 0;
+      font-size: 0.84rem;
+      color: var(--sub);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .history-empty {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(239, 227, 208, 0.72);
+      color: var(--sub);
+      font-size: 0.88rem;
+    }
+
     @media (min-width: 640px) {
       body {
         padding-left: 18px;
@@ -561,6 +648,30 @@
           <textarea id="output-text" readonly></textarea>
         </div>
       </div>
+
+      <div class="history-panel" id="month-graph">
+        <div class="history-title">直近1ヶ月の体重・摂取カロリー</div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-label">体重</div>
+            <div class="summary-value" id="summary-weight">-</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">摂取kcal</div>
+            <div class="summary-value" id="summary-intake">0</div>
+          </div>
+        </div>
+        <div class="graph-wrap">
+          <svg class="graph-svg" id="history-graph" viewBox="0 0 720 320" role="img" aria-label="体重とカロリーの履歴グラフ"></svg>
+        </div>
+        <div class="graph-legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:#2563eb;"></span>体重</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#dc2626;"></span>摂取kcal</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:rgba(37,99,235,0.12);"></span>土曜</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:rgba(220,38,38,0.12);"></span>日曜</span>
+        </div>
+        <div class="history-empty" id="history-empty">生成した当日データがここに表示されます。</div>
+      </div>
       <div class="meal-memory-panel">
         <div class="meal-memory-title">よく使う食事</div>
         <p class="meal-memory-copy">入力した内容は自動保存され、使用回数が多い順に候補へ出ます。</p>
@@ -589,11 +700,13 @@
         state: "bodyWeightRecordApp_v1",
         history: "bodyWeightRecordHistory_v1",
         mealMemory: "bodyWeightMealMemory_v1",
-        mealDays: "bodyWeightMealDayHistory_v1"
+        mealDays: "bodyWeightMealDayHistory_v1",
+        chartHistory: "bodyWeightTextChartMonthHistory_v1"
       };
       var JST_TIME_ZONE = "Asia/Tokyo";
       var DATE_SWITCH_HOUR = 13;
       var MAX_MEAL_CANDIDATES = 50;
+      var MAX_CHART_DAYS = 31;
       var EMPTY_MEAL = { content: "", kcal: "" };
       var MEAL_CONFIG = [
         { key: "breakfast", label: "朝" },
@@ -945,6 +1058,7 @@
       var state = loadState();
       var history = loadJson(STORAGE_KEYS.history, {});
       var mealDayHistory = loadJson(STORAGE_KEYS.mealDays, {});
+      var chartHistory = loadJson(STORAGE_KEYS.chartHistory, []);
       var mealMemory = loadMealMemory();
       var editingMealMemoryId = "";
       var mealCommitMap = {};
@@ -954,6 +1068,10 @@
       var totalKcalEl = document.getElementById("total-kcal");
       var outputEl = document.getElementById("output-text");
       var mealMemoryListEl = document.getElementById("meal-memory-list");
+      var historyGraphEl = document.getElementById("history-graph");
+      var summaryWeightEl = document.getElementById("summary-weight");
+      var summaryIntakeEl = document.getElementById("summary-intake");
+      var historyEmptyEl = document.getElementById("history-empty");
       var mealMemoryEditorEl = document.getElementById("meal-memory-editor");
       var mealMemoryContentEl = document.getElementById("meal-memory-content");
       var mealMemoryKcalEl = document.getElementById("meal-memory-kcal");
@@ -1009,6 +1127,8 @@
         localStorage.setItem(STORAGE_KEYS.state, JSON.stringify(state));
         saveHistory();
         saveMealDayHistory();
+        saveChartHistory();
+        renderHistoryGraph();
         setStatus(statusMessage || "自動保存しました");
       }
 
@@ -1087,6 +1207,221 @@
 
         totalKcalEl.value = String(total);
         return String(total);
+      }
+
+
+
+      function parseNumericInput(value) {
+        var match = String(value || "").trim().match(/-?\d+(\.\d+)?/);
+        var parsed = match ? Number(match[0]) : NaN;
+
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function getPrimaryWeightValue(record) {
+        var firstWeight = record ? parseNumericInput(record.weight0Value) : null;
+        var secondWeight = record ? parseNumericInput(record.weight1Value) : null;
+
+        if (secondWeight !== null) {
+          return secondWeight;
+        }
+        if (firstWeight !== null) {
+          return firstWeight;
+        }
+        return null;
+      }
+
+      function calculateMealsTotal(meals) {
+        var total = 0;
+
+        MEAL_CONFIG.forEach(function (meal) {
+          (meals && meals[meal.key] || []).forEach(function (item) {
+            total += parseKcal(item && item.kcal);
+          });
+        });
+
+        return total;
+      }
+
+      function getCurrentChartEntry() {
+        return {
+          date: state.date,
+          weight: getPrimaryWeightValue(state),
+          intakeKcal: calculateMealsTotal(state.meals)
+        };
+      }
+
+      function normalizeChartEntry(entry) {
+        var date = entry && typeof entry.date === "string" ? entry.date : "";
+        var weight = parseNumericInput(entry && entry.weight);
+        var intakeKcal = parseNumericInput(entry && entry.intakeKcal);
+
+        if (!parseDateInput(date)) {
+          return null;
+        }
+
+        return {
+          date: date,
+          weight: weight,
+          intakeKcal: intakeKcal === null ? 0 : intakeKcal
+        };
+      }
+
+      function getChartEntries() {
+        var entryMap = {};
+
+        (Array.isArray(chartHistory) ? chartHistory : []).forEach(function (entry) {
+          var normalized = normalizeChartEntry(entry);
+
+          if (normalized) {
+            entryMap[normalized.date] = normalized;
+          }
+        });
+
+        Object.keys(history || {}).forEach(function (date) {
+          var record = history[date];
+          var weight = getPrimaryWeightValue(record);
+
+          if (parseDateInput(date) && weight !== null && !entryMap[date]) {
+            entryMap[date] = {
+              date: date,
+              weight: weight,
+              intakeKcal: calculateMealsTotal(mealDayHistory[date])
+            };
+          }
+        });
+
+        if (state.date) {
+          entryMap[state.date] = getCurrentChartEntry();
+        }
+
+        return Object.keys(entryMap).map(function (date) {
+          return entryMap[date];
+        }).filter(function (entry) {
+          return parseDateInput(entry.date);
+        }).sort(function (a, b) {
+          return a.date.localeCompare(b.date);
+        }).slice(-MAX_CHART_DAYS);
+      }
+
+      function saveChartHistory() {
+        chartHistory = getChartEntries();
+        localStorage.setItem(STORAGE_KEYS.chartHistory, JSON.stringify(chartHistory));
+      }
+
+      function createSvgElement(name, attrs) {
+        var element = document.createElementNS("http://www.w3.org/2000/svg", name);
+
+        Object.keys(attrs || {}).forEach(function (key) {
+          element.setAttribute(key, attrs[key]);
+        });
+
+        return element;
+      }
+
+      function buildPointPath(entries, valueKey, scaleY, left, width) {
+        var validEntries = entries.filter(function (entry) {
+          return entry[valueKey] !== null;
+        });
+
+        return validEntries.map(function (entry, index) {
+          var x = left + (entries.length === 1 ? width / 2 : width * entry.index / (entries.length - 1));
+          var y = scaleY(entry[valueKey]);
+
+          return (index ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+        }).join(" ");
+      }
+
+      function renderHistoryGraph() {
+        var entries = getChartEntries().map(function (entry, index) {
+          var next = clone(entry);
+
+          next.index = index;
+          return next;
+        });
+        var latest = entries[entries.length - 1];
+        var width = 720;
+        var height = 320;
+        var left = 52;
+        var right = 28;
+        var top = 28;
+        var bottom = 46;
+        var graphWidth = width - left - right;
+        var graphHeight = height - top - bottom;
+        var weightValues = entries.map(function (entry) { return entry.weight; }).filter(function (value) { return value !== null; });
+        var intakeValues = entries.map(function (entry) { return entry.intakeKcal; }).filter(function (value) { return value !== null; });
+        var weightMin = weightValues.length ? Math.min.apply(null, weightValues) : 0;
+        var weightMax = weightValues.length ? Math.max.apply(null, weightValues) : 1;
+        var intakeMin = 0;
+        var intakeMax = Math.max(1, intakeValues.length ? Math.max.apply(null, intakeValues) : 1);
+        var weightPadding = Math.max(0.4, (weightMax - weightMin) * 0.25);
+        var intakePadding = Math.max(100, intakeMax * 0.08);
+
+        function weightY(value) {
+          return top + (weightMax + weightPadding - value) / Math.max(1, weightMax - weightMin + weightPadding * 2) * graphHeight;
+        }
+
+        function intakeY(value) {
+          return top + (intakeMax + intakePadding - value) / Math.max(1, intakeMax + intakePadding - intakeMin) * graphHeight;
+        }
+
+        if (!historyGraphEl) {
+          return;
+        }
+
+        historyGraphEl.replaceChildren();
+
+        if (!entries.length) {
+          if (historyEmptyEl) {
+            historyEmptyEl.hidden = false;
+          }
+          if (summaryWeightEl) {
+            summaryWeightEl.textContent = "-";
+          }
+          if (summaryIntakeEl) {
+            summaryIntakeEl.textContent = "0";
+          }
+          return;
+        }
+
+        if (historyEmptyEl) {
+          historyEmptyEl.hidden = true;
+        }
+        if (summaryWeightEl) {
+          summaryWeightEl.textContent = latest && latest.weight !== null ? latest.weight.toFixed(1) + "kg" : "-";
+        }
+        if (summaryIntakeEl) {
+          summaryIntakeEl.textContent = String(latest ? latest.intakeKcal : 0);
+        }
+
+        [0, 0.5, 1].forEach(function (ratio) {
+          var y = top + graphHeight * ratio;
+          historyGraphEl.appendChild(createSvgElement("line", { x1: left, y1: y, x2: width - right, y2: y, stroke: "rgba(109,90,72,0.18)", "stroke-width": "1" }));
+        });
+
+        entries.forEach(function (entry) {
+          var date = parseDateInput(entry.date);
+          var x = left + (entries.length === 1 ? graphWidth / 2 : graphWidth * entry.index / (entries.length - 1));
+          var isSaturday = date && date.getDay() === 6;
+          var isSunday = date && date.getDay() === 0;
+          var label;
+
+          if (isSaturday || isSunday) {
+            historyGraphEl.appendChild(createSvgElement("rect", { x: x - 7, y: top, width: 14, height: graphHeight, fill: isSaturday ? "rgba(37,99,235,0.12)" : "rgba(220,38,38,0.12)" }));
+          }
+
+          if (entry.index === 0 || entry.index === entries.length - 1 || entry.index % 5 === 0) {
+            label = pad2(date.getMonth() + 1) + "/" + pad2(date.getDate());
+            historyGraphEl.appendChild(createSvgElement("text", { x: x, y: height - 16, fill: "#6d5a48", "font-size": "12", "text-anchor": "middle" })).textContent = label;
+          }
+        });
+
+        historyGraphEl.appendChild(createSvgElement("text", { x: 10, y: weightY(weightMax).toFixed(1), fill: "#2563eb", "font-size": "12" })).textContent = weightMax.toFixed(1);
+        historyGraphEl.appendChild(createSvgElement("text", { x: 10, y: weightY(weightMin).toFixed(1), fill: "#2563eb", "font-size": "12" })).textContent = weightMin.toFixed(1);
+        historyGraphEl.appendChild(createSvgElement("text", { x: width - 24, y: intakeY(intakeMax).toFixed(1), fill: "#dc2626", "font-size": "12", "text-anchor": "end" })).textContent = String(Math.round(intakeMax));
+        historyGraphEl.appendChild(createSvgElement("text", { x: width - 24, y: intakeY(0).toFixed(1), fill: "#dc2626", "font-size": "12", "text-anchor": "end" })).textContent = "0";
+        historyGraphEl.appendChild(createSvgElement("path", { d: buildPointPath(entries, "intakeKcal", intakeY, left, graphWidth), fill: "none", stroke: "#dc2626", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+        historyGraphEl.appendChild(createSvgElement("path", { d: buildPointPath(entries, "weight", weightY, left, graphWidth), fill: "none", stroke: "#2563eb", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }));
       }
 
       function updateDateNotes() {
@@ -1749,6 +2084,7 @@
       updateWeightFieldInputs();
       restoreOutput();
       updateTotalKcal();
+      renderHistoryGraph();
 
       document.getElementById("generate-button").addEventListener("click", generateText);
       document.getElementById("copy-button").addEventListener("click", copyText);
