@@ -1352,17 +1352,17 @@
         var intakeValues = entries.map(function (entry) { return entry.intakeKcal; }).filter(function (value) { return value !== null; });
         var weightMin = weightValues.length ? Math.min.apply(null, weightValues) : 0;
         var weightMax = weightValues.length ? Math.max.apply(null, weightValues) : 1;
-        var intakeMin = 0;
+        var intakeMin = intakeValues.length ? Math.min.apply(null, intakeValues) : 0;
         var intakeMax = Math.max(1, intakeValues.length ? Math.max.apply(null, intakeValues) : 1);
         var weightPadding = Math.max(0.4, (weightMax - weightMin) * 0.25);
-        var intakePadding = Math.max(100, intakeMax * 0.08);
+        var intakePadding = Math.max(100, (intakeMax - intakeMin) * 0.25);
 
         function weightY(value) {
           return top + (weightMax + weightPadding - value) / Math.max(1, weightMax - weightMin + weightPadding * 2) * graphHeight;
         }
 
         function intakeY(value) {
-          return top + (intakeMax + intakePadding - value) / Math.max(1, intakeMax + intakePadding - intakeMin) * graphHeight;
+          return top + (intakeMax + intakePadding - value) / Math.max(1, intakeMax - intakeMin + intakePadding * 2) * graphHeight;
         }
 
         if (!historyGraphEl) {
@@ -1419,7 +1419,7 @@
         historyGraphEl.appendChild(createSvgElement("text", { x: 10, y: weightY(weightMax).toFixed(1), fill: "#2563eb", "font-size": "12" })).textContent = weightMax.toFixed(1);
         historyGraphEl.appendChild(createSvgElement("text", { x: 10, y: weightY(weightMin).toFixed(1), fill: "#2563eb", "font-size": "12" })).textContent = weightMin.toFixed(1);
         historyGraphEl.appendChild(createSvgElement("text", { x: width - 24, y: intakeY(intakeMax).toFixed(1), fill: "#dc2626", "font-size": "12", "text-anchor": "end" })).textContent = String(Math.round(intakeMax));
-        historyGraphEl.appendChild(createSvgElement("text", { x: width - 24, y: intakeY(0).toFixed(1), fill: "#dc2626", "font-size": "12", "text-anchor": "end" })).textContent = "0";
+        historyGraphEl.appendChild(createSvgElement("text", { x: width - 24, y: intakeY(intakeMin).toFixed(1), fill: "#dc2626", "font-size": "12", "text-anchor": "end" })).textContent = String(Math.round(intakeMin));
         historyGraphEl.appendChild(createSvgElement("path", { d: buildPointPath(entries, "intakeKcal", intakeY, left, graphWidth), fill: "none", stroke: "#dc2626", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }));
         historyGraphEl.appendChild(createSvgElement("path", { d: buildPointPath(entries, "weight", weightY, left, graphWidth), fill: "none", stroke: "#2563eb", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }));
       }
