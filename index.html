@@ -242,6 +242,7 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .meal-drag-handle:active {
@@ -1867,7 +1868,6 @@
 
           event.preventDefault();
           row.classList.add("is-dragging");
-          dragHandle.setPointerCapture(pointerId);
 
           function moveRow(pointerEvent) {
             if (pointerEvent.pointerId !== pointerId) {
@@ -1903,9 +1903,9 @@
               return;
             }
 
-            dragHandle.removeEventListener("pointermove", moveRow);
-            dragHandle.removeEventListener("pointerup", finishDrag);
-            dragHandle.removeEventListener("pointercancel", cancelDrag);
+            document.removeEventListener("pointermove", moveRow);
+            document.removeEventListener("pointerup", finishDrag);
+            document.removeEventListener("pointercancel", cancelDrag);
             row.classList.remove("is-dragging");
 
             if (!moved) {
@@ -1924,15 +1924,15 @@
               return;
             }
 
-            dragHandle.removeEventListener("pointermove", moveRow);
-            dragHandle.removeEventListener("pointerup", finishDrag);
-            dragHandle.removeEventListener("pointercancel", cancelDrag);
+            document.removeEventListener("pointermove", moveRow);
+            document.removeEventListener("pointerup", finishDrag);
+            document.removeEventListener("pointercancel", cancelDrag);
             renderMeals();
           }
 
-          dragHandle.addEventListener("pointermove", moveRow);
-          dragHandle.addEventListener("pointerup", finishDrag);
-          dragHandle.addEventListener("pointercancel", cancelDrag);
+          document.addEventListener("pointermove", moveRow, { passive: false });
+          document.addEventListener("pointerup", finishDrag);
+          document.addEventListener("pointercancel", cancelDrag);
         });
 
         dragHandle.addEventListener("keydown", function (event) {
