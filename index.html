@@ -222,9 +222,46 @@
 
     .meal-row-actions {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 92px 44px;
+      grid-template-columns: 36px minmax(0, 1fr) 92px 44px;
       gap: 8px;
-      align-items: start;
+      align-items: center;
+    }
+
+    .meal-drag-handle {
+      min-height: 44px;
+      width: 36px;
+      padding: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(215, 200, 174, 0.9);
+      background: rgba(255, 253, 249, 0.9);
+      color: var(--sub);
+      box-shadow: none;
+      font-size: 1.15rem;
+      line-height: 1;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .meal-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .meal-row.is-dragging {
+      position: relative;
+      z-index: 2;
+      padding: 6px;
+      margin: -6px;
+      border-radius: 12px;
+      background: rgba(255, 248, 235, 0.98);
+      box-shadow: 0 8px 22px rgba(85, 62, 44, 0.16);
+    }
+
+    .meal-row.is-dragging .meal-drag-handle {
+      color: var(--accent-strong);
+      border-color: rgba(184, 92, 56, 0.5);
+      background: var(--soft);
     }
 
     .meal-row-picker-toggle {
@@ -1764,6 +1801,7 @@
         var candidateSearch = document.createElement("input");
         var candidateSelect = document.createElement("select");
         var mainRow = document.createElement("div");
+        var dragHandle = document.createElement("button");
         var contentInput = document.createElement("input");
         var kcalInput = document.createElement("input");
         var removeButton = document.createElement("button");
@@ -1773,6 +1811,15 @@
         pickerPanel.className = "meal-row-picker-panel";
         pickerPanel.hidden = true;
         mainRow.className = "meal-row-actions";
+
+        dragHandle.type = "button";
+        dragHandle.className = "meal-drag-handle";
+        dragHandle.textContent = "≡";
+        dragHandle.setAttribute("aria-label", mealKey + " 並べ替え " + (rowIndex + 1));
+        dragHandle.setAttribute("title", "ドラッグして並べ替え");
+        dragHandle.setAttribute("data-meal-key", mealKey);
+        dragHandle.setAttribute("data-row-index", String(rowIndex));
+        dragHandle.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown");
 
         pickerToggle.type = "button";
         pickerToggle.className = "meal-row-picker-toggle";
@@ -1807,6 +1854,112 @@
         removeButton.className = "meal-remove-row";
         removeButton.textContent = "−";
         removeButton.setAttribute("aria-label", mealKey + " 行削除 " + (rowIndex + 1));
+
+        dragHandle.addEventListener("pointerdown", function (event) {
+          if (event.button !== undefined && event.button !== 0) {
+            return;
+          }
+
+          var list = row.parentElement;
+          var startIndex = Array.prototype.indexOf.call(list.children, row);
+          var pointerId = event.pointerId;
+          var moved = false;
+
+          event.preventDefault();
+          row.classList.add("is-dragging");
+          dragHandle.setPointerCapture(pointerId);
+
+          function moveRow(pointerEvent) {
+            if (pointerEvent.pointerId !== pointerId) {
+              return;
+            }
+
+            pointerEvent.preventDefault();
+            var siblings = Array.from(list.children).filter(function (candidate) {
+              return candidate !== row;
+            });
+            var nextSibling = siblings.find(function (candidate) {
+              var rect = candidate.getBoundingClientRect();
+              return pointerEvent.clientY < rect.top + rect.height / 2;
+            });
+
+            if (nextSibling) {
+              list.insertBefore(row, nextSibling);
+            } else {
+              list.appendChild(row);
+            }
+
+            if (pointerEvent.clientY < 72) {
+              window.scrollBy(0, -18);
+            } else if (pointerEvent.clientY > window.innerHeight - 72) {
+              window.scrollBy(0, 18);
+            }
+
+            moved = Array.prototype.indexOf.call(list.children, row) !== startIndex;
+          }
+
+          function finishDrag(pointerEvent) {
+            if (pointerEvent.pointerId !== pointerId) {
+              return;
+            }
+
+            dragHandle.removeEventListener("pointermove", moveRow);
+            dragHandle.removeEventListener("pointerup", finishDrag);
+            dragHandle.removeEventListener("pointercancel", cancelDrag);
+            row.classList.remove("is-dragging");
+
+            if (!moved) {
+              return;
+            }
+
+            var endIndex = Array.prototype.indexOf.call(list.children, row);
+            var movedItem = state.meals[mealKey].splice(startIndex, 1)[0];
+            state.meals[mealKey].splice(endIndex, 0, movedItem);
+            saveState("食事の順番を保存しました");
+            renderMeals();
+          }
+
+          function cancelDrag(pointerEvent) {
+            if (pointerEvent.pointerId !== pointerId) {
+              return;
+            }
+
+            dragHandle.removeEventListener("pointermove", moveRow);
+            dragHandle.removeEventListener("pointerup", finishDrag);
+            dragHandle.removeEventListener("pointercancel", cancelDrag);
+            renderMeals();
+          }
+
+          dragHandle.addEventListener("pointermove", moveRow);
+          dragHandle.addEventListener("pointerup", finishDrag);
+          dragHandle.addEventListener("pointercancel", cancelDrag);
+        });
+
+        dragHandle.addEventListener("keydown", function (event) {
+          if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+            return;
+          }
+
+          var direction = event.key === "ArrowUp" ? -1 : 1;
+          var nextIndex = rowIndex + direction;
+          if (nextIndex < 0 || nextIndex >= state.meals[mealKey].length) {
+            return;
+          }
+
+          event.preventDefault();
+          var movedItem = state.meals[mealKey].splice(rowIndex, 1)[0];
+          state.meals[mealKey].splice(nextIndex, 0, movedItem);
+          saveState("食事の順番を保存しました");
+          renderMeals();
+          window.requestAnimationFrame(function () {
+            var nextHandle = document.querySelector(
+              '.meal-drag-handle[data-meal-key="' + mealKey + '"][data-row-index="' + nextIndex + '"]'
+            );
+            if (nextHandle) {
+              nextHandle.focus();
+            }
+          });
+        });
 
         function setPickerOpen(isOpen) {
           pickerPanel.hidden = !isOpen;
@@ -1933,6 +2086,7 @@
         pickerPanel.appendChild(candidateSelect);
         pickerWrap.appendChild(pickerToggle);
         pickerWrap.appendChild(pickerPanel);
+        mainRow.appendChild(dragHandle);
         mainRow.appendChild(contentInput);
         mainRow.appendChild(kcalInput);
         mainRow.appendChild(removeButton);
